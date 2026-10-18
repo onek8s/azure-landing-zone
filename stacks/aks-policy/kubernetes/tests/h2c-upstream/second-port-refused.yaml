@@ -1,0 +1,14 @@
+# One port right, one without the field: the one without is reported.
+apiVersion: v1
+kind: Service
+metadata:
+  name: app
+  namespace: ext-fi-app
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+    appProtocol: kubernetes.io/h2c
+  - name: metrics
+    port: 9090

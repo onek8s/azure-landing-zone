@@ -1,0 +1,16 @@
+# aks-fluxcd-example apps/aks-hello/service.yaml as rendered (namespace added)
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/name: aks-hello
+  name: aks-hello
+  namespace: int-fi-example
+spec:
+  ports:
+  - appProtocol: kubernetes.io/h2c
+    name: http
+    port: 80
+    targetPort: http
+  selector:
+    app.kubernetes.io/name: aks-hello

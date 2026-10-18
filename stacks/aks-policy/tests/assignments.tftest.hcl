@@ -42,7 +42,7 @@ run "platform_kubernetes_policies" {
   command = plan
 
   assert {
-    condition     = length(azurerm_policy_definition.kubernetes) == 13 && alltrue([for d in azurerm_policy_definition.kubernetes : d.mode == "Microsoft.Kubernetes.Data"])
+    condition     = length(azurerm_policy_definition.kubernetes) == 14 && alltrue([for d in azurerm_policy_definition.kubernetes : d.mode == "Microsoft.Kubernetes.Data"])
     error_message = "One Microsoft.Kubernetes.Data definition per constraint template."
   }
 
