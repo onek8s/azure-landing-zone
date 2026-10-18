@@ -54,6 +54,7 @@ locals {
     secrets-via-eso       = { api_groups = [""], kinds = ["Secret"], parameters = { zones = "Array", exemptUsers = "Array" } }
     eso-objects           = { api_groups = ["external-secrets.io"], kinds = ["SecretStore", "ExternalSecret", "PushSecret"], parameters = { zones = "Array", keyVaultNamePrefix = "String", serviceAccount = "String" } }
     service-accounts      = { api_groups = [""], kinds = ["Pod", "ServiceAccount"], parameters = { readerServiceAccount = "String" } }
+    h2c-upstream          = { api_groups = [""], kinds = ["Service"], parameters = { allowedAppProtocols = "Array" } }
     rollout-guardrails = {
       api_groups = ["apps", "autoscaling", "policy"]
       kinds      = ["Deployment", "StatefulSet", "HorizontalPodAutoscaler", "PodDisruptionBudget"]
@@ -187,6 +188,15 @@ locals {
       clusters    = "all"
       excluded    = local.kubernetes_excluded_namespaces
       values      = { readerServiceAccount = local.key_vault_service_account }
+      always_deny = false
+    }
+    h2c-upstream = {
+      # HTTP/2 from the gateway to the pod (design D69, D70): audit until the lab shows both hops (V28, V29).
+      display     = "Stateless clusters: application Service ports declare appProtocol kubernetes.io/h2c - no HTTP/1.1 from the gateway"
+      template    = "h2c-upstream"
+      clusters    = "stateless"
+      excluded    = local.kubernetes_excluded_namespaces
+      values      = { allowedAppProtocols = ["kubernetes.io/h2c"] }
       always_deny = false
     }
     rollout-guardrails = {

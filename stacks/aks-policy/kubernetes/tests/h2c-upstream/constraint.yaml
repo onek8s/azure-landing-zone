@@ -1,0 +1,30 @@
+# The parameters stacks/aks-policy assigns (kubernetes.tf).
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sPlatformH2cUpstream
+metadata:
+  name: h2c-upstream
+spec:
+  match:
+    kinds:
+    - apiGroups:
+      - ''
+      kinds:
+      - Service
+    excludedNamespaces:
+    - kube-system
+    - gatekeeper-system
+    - azure-arc
+    - azure-extensions-usage-system
+    - flux-system
+    - kube-public
+    - aks-istio-system
+    - kube-node-lease
+    - external-secrets
+    - external-dns
+    - platform-gateway
+    - infra-observability
+    - '*-gateway'
+    - '*-secrets'
+  parameters:
+    allowedAppProtocols:
+    - kubernetes.io/h2c

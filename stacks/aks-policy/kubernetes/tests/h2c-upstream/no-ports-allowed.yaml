@@ -1,0 +1,9 @@
+# An ExternalName Service has no ports: nothing to hold to h2c.
+apiVersion: v1
+kind: Service
+metadata:
+  name: outside
+  namespace: ext-fi-app
+spec:
+  type: ExternalName
+  externalName: example.com

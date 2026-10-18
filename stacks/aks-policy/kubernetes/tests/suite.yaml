@@ -724,6 +724,34 @@ tests:
     object: eso-objects/other-namespace-allowed.yaml
     assertions:
     - violations: 'no'
+- name: h2c-upstream
+  template: ../templates/h2c-upstream.yaml
+  constraint: h2c-upstream/constraint.yaml
+  cases:
+  - name: h2c-allowed
+    object: h2c-upstream/h2c-allowed.yaml
+    assertions:
+    - violations: 'no'
+  - name: example-aks-hello-allowed
+    object: h2c-upstream/example-aks-hello-allowed.yaml
+    assertions:
+    - violations: 'no'
+  - name: no-ports-allowed
+    object: h2c-upstream/no-ports-allowed.yaml
+    assertions:
+    - violations: 'no'
+  - name: no-app-protocol-refused
+    object: h2c-upstream/no-app-protocol-refused.yaml
+    assertions:
+    - violations: 1
+  - name: http1-refused
+    object: h2c-upstream/http1-refused.yaml
+    assertions:
+    - violations: 1
+  - name: second-port-refused
+    object: h2c-upstream/second-port-refused.yaml
+    assertions:
+    - violations: 1
 - name: service-accounts
   template: ../templates/service-accounts.yaml
   constraint: service-accounts/constraint.yaml

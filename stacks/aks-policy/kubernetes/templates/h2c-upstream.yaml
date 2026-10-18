@@ -1,0 +1,57 @@
+# HTTP/2 from the gateway to the pod (design section 4.1, decisions D69 and D70 - "HTTP/1.1 must die"):
+# the zone's gateway connects to an application over HTTP/2 cleartext with prior knowledge (h2c),
+# never HTTP/1.1 - the proxy-to-back-end hop whose shared connections request smuggling needs. The
+# gateway chooses h2c from the Service port's `appProtocol`, so every port of every Service in an
+# application namespace declares it (a custom Azure Policy definition sees only the object under
+# review, not the HTTPRoutes that reference it: no data replication). The application serves h2c on
+# the port; the kubelet's probes still use HTTP/1.1 on it until Kubernetes 1.38.
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8splatformh2cupstream
+  annotations:
+    description: Every port of an application Service declares an allowed appProtocol (HTTP/2 cleartext), so the gateway never speaks HTTP/1.1 to a pod.
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sPlatformH2cUpstream
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            allowedAppProtocols:
+              type: array
+              description: The appProtocol values a Service port may declare (kubernetes.io/h2c).
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8splatformh2cupstream
+
+        obj := input.review.object
+
+        violation[{"msg": msg}] {
+          obj.kind == "Service"
+          port := obj.spec.ports[_]
+          object.get(port, "appProtocol", "") == ""
+          msg := sprintf("Service %v port %v declares no appProtocol; set `appProtocol: kubernetes.io/h2c` and serve HTTP/2 cleartext (h2c) on it - the gateway never speaks HTTP/1.1 to a pod (design D69).", [obj.metadata.name, port_name(port)])
+        }
+
+        violation[{"msg": msg}] {
+          obj.kind == "Service"
+          port := obj.spec.ports[_]
+          protocol := object.get(port, "appProtocol", "")
+          protocol != ""
+          not allowed(protocol)
+          msg := sprintf("Service %v port %v declares appProtocol %v; only %v is allowed - the gateway never speaks HTTP/1.1 to a pod (design D69).", [obj.metadata.name, port_name(port), protocol, input.parameters.allowedAppProtocols])
+        }
+
+        allowed(protocol) {
+          protocol == input.parameters.allowedAppProtocols[_]
+        }
+
+        port_name(port) := name {
+          name := port.name
+        } else := port.port
