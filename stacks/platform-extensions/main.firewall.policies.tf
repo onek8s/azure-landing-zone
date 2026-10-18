@@ -35,8 +35,8 @@ locals {
   # Per application, what it may reach outside the landing zone (design D59): one file per application namespace,
   # firewall-applications/<env>-<exposure>/<namespace>.yaml - written by the egress agent's pull requests
   # (onek8s/aks-ai-agents) from the flows the firewall denied, reviewed by the platform and security. The source
-  # is the application's zone: its pods have addresses of the zone's node subnets only in a cell without an
-  # overlay (aks-terraform pod_network = "subnet"), so the firewall tells the zones apart, not the applications
+  # is the application's zone: its pods have addresses of the zone's pod subnet only in a cell without an
+  # overlay (aks-terraform pod_network = "pod-subnet"), so the firewall tells the zones apart, not the applications
   # within one - the rule's name says whose it is.
   firewall_application_files = !local.firewall_policies ? [] : [
     for f in fileset("${path.module}/${var.firewall_applications_dir}", "*/*.yaml") : f if contains(keys(local.firewall_spokes), split("/", f)[0])

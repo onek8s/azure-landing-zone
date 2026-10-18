@@ -1,6 +1,7 @@
 # Spot chosen by the application (R17): a pod labelled platform/capacity: spot prefers spot nodes
-# that already exist, not only spot NodePools (their weight). Only when it states no preferred node
-# affinity of its own.
+# that already exist, not only spot NodePools (their weight) - NAP's spot nodes, or a pod-subnet cell's
+# classic spot pools (design D74), which AKS labels kubernetes.azure.com/scalesetpriority=spot. Only when
+# it states no preferred node affinity of its own.
 apiVersion: mutations.gatekeeper.sh/v1
 kind: Assign
 metadata:
@@ -31,3 +32,7 @@ spec:
           preference:
             matchExpressions:
               - {key: karpenter.sh/capacity-type, operator: In, values: ["spot"]}
+        - weight: 50
+          preference:
+            matchExpressions:
+              - {key: kubernetes.azure.com/scalesetpriority, operator: In, values: ["spot"]}
