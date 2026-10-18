@@ -72,6 +72,8 @@ locals {
   build_tenant_policy = local.azure_firewall ? module.platform.firewall_policy_id : one(azurerm_firewall_policy.parent[*].id)
   ipg_management      = local.azure_firewall ? one(azurerm_ip_group.management[*].id) : one(azurerm_ip_group.policy_management[*].id)
   ipg_client          = local.azure_firewall ? one(azurerm_ip_group.client[*].id) : one(azurerm_ip_group.policy_client[*].id)
+  # Every cell's snet-system: its private cluster's API server endpoint (aks-terraform D58)
+  cell_api_server_prefixes = distinct(flatten([for s in values(local.firewall_spokes) : s.system_prefixes]))
 }
 
 resource "azurerm_firewall_policy_rule_collection_group" "build_tenant" {
@@ -81,9 +83,51 @@ resource "azurerm_firewall_policy_rule_collection_group" "build_tenant" {
   firewall_policy_id = local.build_tenant_policy
   priority           = 200
 
+  # Network rules before application rules: within a rule collection group Azure requires DNAT, then network,
+  # then application collections by priority ("Invalid rule priority" in the portal otherwise)
+  network_rule_collection {
+    name     = "management-network"
+    priority = 100
+    action   = "Allow"
+
+    rule {
+      name                  = "entra-id"
+      protocols             = ["TCP"]
+      source_ip_groups      = [local.ipg_management, local.ipg_client]
+      destination_addresses = ["AzureActiveDirectory"]
+      destination_ports     = ["443"]
+    }
+
+    # labfw VPN clients (agent and management machines outside Azure) -> every cluster's API server: the management
+    # network's API server private endpoints and each cell's snet-system, which holds its private cluster's Private
+    # Link endpoint (aks-terraform D58) - and the jump host
+    dynamic "rule" {
+      for_each = local.labfw_vpn ? [1] : []
+      content {
+        name                  = "management-vpn"
+        protocols             = ["TCP"]
+        source_addresses      = local.labfw_vpn_pool
+        destination_addresses = concat([local.management.snet_aks_api_pe, local.management.snet_jump], local.cell_api_server_prefixes)
+        destination_ports     = ["443"]
+      }
+    }
+
+    # ... and SSH to the jump host only
+    dynamic "rule" {
+      for_each = local.labfw_vpn ? [1] : []
+      content {
+        name                  = "management-vpn-ssh"
+        protocols             = ["TCP"]
+        source_addresses      = local.labfw_vpn_pool
+        destination_addresses = [local.management.snet_jump]
+        destination_ports     = ["22"]
+      }
+    }
+  }
+
   application_rule_collection {
     name     = "management-egress"
-    priority = 100
+    priority = 200
     action   = "Allow"
 
     rule {
@@ -119,33 +163,6 @@ resource "azurerm_firewall_policy_rule_collection_group" "build_tenant" {
       protocols {
         type = "Https"
         port = 443
-      }
-    }
-  }
-
-  network_rule_collection {
-    name     = "management-network"
-    priority = 200
-    action   = "Allow"
-
-    rule {
-      name                  = "entra-id"
-      protocols             = ["TCP"]
-      source_ip_groups      = [local.ipg_management, local.ipg_client]
-      destination_addresses = ["AzureActiveDirectory"]
-      destination_ports     = ["443"]
-    }
-
-    # labfw VPN clients (agent and management machines outside Azure) -> the API server private endpoints and SSH
-    # to the jump host
-    dynamic "rule" {
-      for_each = local.labfw_vpn ? [1] : []
-      content {
-        name                  = "management-vpn"
-        protocols             = ["TCP"]
-        source_addresses      = local.labfw_vpn_pool
-        destination_addresses = [local.management.snet_aks_api_pe, local.management.snet_jump]
-        destination_ports     = ["22", "443"]
       }
     }
   }

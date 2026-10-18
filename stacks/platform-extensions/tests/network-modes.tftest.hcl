@@ -430,6 +430,24 @@ run "labfw_mode_vpn_and_dns_proxy" {
   }
 
   assert {
+    condition = alltrue([
+      for c in azurerm_firewall_policy_rule_collection_group.build_tenant[0].network_rule_collection : c.priority < min([for a in azurerm_firewall_policy_rule_collection_group.build_tenant[0].application_rule_collection : a.priority]...)
+    ])
+    error_message = "Azure requires a group's network rule collections before its application rule collections (smaller priority)."
+  }
+
+  assert {
+    condition = alltrue([
+      for r in one(azurerm_firewall_policy_rule_collection_group.build_tenant[0].network_rule_collection).rule :
+      r.destination_ports == tolist(["443"]) && contains(r.destination_addresses, "172.21.0.0/24") if r.name == "management-vpn"
+      ]) && anytrue([
+      for r in one(azurerm_firewall_policy_rule_collection_group.build_tenant[0].network_rule_collection).rule :
+      r.name == "management-vpn-ssh" && r.destination_ports == tolist(["22"])
+    ])
+    error_message = "management-vpn reaches every cell's API server (snet-system) on 443; SSH goes to the jump host alone."
+  }
+
+  assert {
     condition     = length(azurerm_network_security_rule.management_api_pe_vpn) == 1 && azurerm_network_security_rule.management_api_pe_vpn[0].source_address_prefix == "10.0.1.4"
     error_message = "the API server private endpoints accept labfw's SNATed VPN traffic."
   }
