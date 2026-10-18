@@ -32,9 +32,10 @@ environments = {
 # (int-se, index 2) is disabled there, so it has no prefixes here either. Disabling or adding a country is the
 # zone's entry here, in shared/envs/dev.tfvars (isolation_zones.<zone>.enabled) and in environments/dev/policy.tfvars.
 # SNAT (design D59): every allowed flow that leaves the landing zone's own ranges - the hub and shared networks
-# 10.0.0.0/16, the cells' 172.16.0.0/12 and 100.64.0.0/10 - is translated to the firewall's address, so no cell
-# address (the az3 pods' 100.64.0.0/16 above all) reaches the corporate network (10.200.0.0/22) or the internet.
-firewall_snat_private_ranges = ["10.0.0.0/16", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10"]
+# 10.0.0.0/16, the cells' 172.16.0.0/12, 10.100.0.0/16 (az3's nodes) and 100.64.0.0/10 - is translated to the firewall's
+# address, so no cell address (the az3 pods' 100.64.0.0/16 above all) reaches the corporate network (10.200.0.0/22) or
+# the internet.
+firewall_snat_private_ranges = ["10.0.0.0/16", "10.100.0.0/16", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10"]
 
 firewall_exposures = {
   int = {
@@ -43,9 +44,10 @@ firewall_exposures = {
     environments = {
       dev = {
         # dev-int-stateless-az1 (disabled), -az2, -az3: snet-system, which also holds the private API server's
-        # Private Link endpoint (reached from the management network and the labfw VPN). az3 has no overlay
-        # (design D59): its pods have addresses of these subnets, in 100.64.0.0/16, all the way to labfw.
-        system_prefixes    = ["172.22.0.0/24", "172.22.16.0/24", "100.64.0.0/20"]
+        # Private Link endpoint (reached from the management network and the labfw VPN). az3 is a pod-subnet cell
+        # (design D59, D74): nodes in /24 slots of 10.100.0.0/16, its pods in /20s of 100.64.0.0/16 (snet-system-pods,
+        # snet-<zone>-pods), with their own addresses all the way to labfw.
+        system_prefixes    = ["172.22.0.0/24", "172.22.16.0/24", "10.100.0.0/24", "100.64.0.0/20"]
         shared_prefixes    = ["172.20.2.0/26"] # snet-shared-pe: the vaults', Foundry's and the state account's private endpoints
         platform_key_vault = "kv-onek8s-gwc-platform"
         # Basic, public (design D62): the container-registry rule lets the cells reach its endpoint and its storage
@@ -56,14 +58,14 @@ firewall_exposures = {
         observability_fqdns = ["*.grafana.net", "stats.grafana.org"]
         zones = {
           int-fi = {
-            prefixes        = ["172.22.1.0/24", "172.22.17.0/24", "100.64.16.0/20"]
+            prefixes        = ["172.22.1.0/24", "172.22.17.0/24", "10.100.1.0/24", "100.64.16.0/20"]
             key_vault       = "kv-onek8s-gwc-int-fi"
             fqdn_allow_list = ["login.microsoftonline.com"]
           }
           # Sweden (2026-10-15): run by az3 only, the firewall-egress cell - its applications' own destinations
           # are in firewall-applications/dev-int/<namespace>.yaml
           int-se = {
-            prefixes        = ["172.22.2.0/24", "172.22.18.0/24", "100.64.32.0/20"]
+            prefixes        = ["172.22.2.0/24", "172.22.18.0/24", "10.100.2.0/24", "100.64.32.0/20"]
             key_vault       = "kv-onek8s-gwc-int-se"
             fqdn_allow_list = ["login.microsoftonline.com"]
           }
