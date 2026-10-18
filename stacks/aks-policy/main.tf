@@ -15,7 +15,8 @@ locals {
 
   # Platform namespaces, left out of the application rules (section 2.7)
   # aks-command: `az aks command invoke`'s pod, the break-glass path into a private cluster
-  platform_namespaces = ["kube-system", "gatekeeper-system", "azure-arc", "azure-extensions-usage-system", "flux-system", "kube-public", "aks-istio-system", "aks-command"]
+  # dapr-system: the AKS Dapr extension's control plane, a lab trial on aks-terraform's az3 (design D65)
+  platform_namespaces = ["kube-system", "gatekeeper-system", "azure-arc", "azure-extensions-usage-system", "flux-system", "kube-public", "aks-istio-system", "aks-command", "dapr-system"]
 
   # Images by digest from the environment's ACR only
   allowed_images_regex = "^${var.container_registry_name}\\.azurecr\\.io/[^@]+@sha256:[a-f0-9]{64}$"
