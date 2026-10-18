@@ -1,0 +1,14 @@
+# aks-terraform gateways/traefik/release.yaml's extraObjects ConfigMap, as the chart renders it.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: traefik-dynamic
+  namespace: int-fi-gateway
+data:
+  dynamic.yaml: |
+    tls:
+      options:
+        default:
+          alpnProtocols:
+            - h2
+          minVersion: VersionTLS13

@@ -1,0 +1,20 @@
+# The parameters stacks/aks-policy assigns (kubernetes.tf).
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sPlatformGatewayTls
+metadata:
+  name: gateway-tls
+spec:
+  match:
+    kinds:
+    - apiGroups:
+      - ''
+      kinds:
+      - ConfigMap
+    namespaces:
+    - '*-gateway'
+  parameters:
+    configMapName: traefik-dynamic
+    dataKey: dynamic.yaml
+    alpnProtocols:
+    - h2
+    minVersion: VersionTLS13
