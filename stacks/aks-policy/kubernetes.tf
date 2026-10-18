@@ -55,6 +55,7 @@ locals {
     eso-objects           = { api_groups = ["external-secrets.io"], kinds = ["SecretStore", "ExternalSecret", "PushSecret"], parameters = { zones = "Array", keyVaultNamePrefix = "String", serviceAccount = "String" } }
     service-accounts      = { api_groups = [""], kinds = ["Pod", "ServiceAccount"], parameters = { readerServiceAccount = "String" } }
     h2c-upstream          = { api_groups = [""], kinds = ["Service"], parameters = { allowedAppProtocols = "Array" } }
+    gateway-tls           = { api_groups = [""], kinds = ["ConfigMap"], parameters = { configMapName = "String", dataKey = "String", alpnProtocols = "Array", minVersion = "String" } }
     rollout-guardrails = {
       api_groups = ["apps", "autoscaling", "policy"]
       kinds      = ["Deployment", "StatefulSet", "HorizontalPodAutoscaler", "PodDisruptionBudget"]
@@ -188,6 +189,17 @@ locals {
       clusters    = "all"
       excluded    = local.kubernetes_excluded_namespaces
       values      = { readerServiceAccount = local.key_vault_service_account }
+      always_deny = false
+    }
+    gateway-tls = {
+      # The gateways' TLS options read back (design D70, D71): HTTP/2 and TLS 1.3 only, the same on
+      # every gateway. Matches only the gateway namespaces (the one place the ConfigMap lives), so the
+      # exclusion list is the platform's without `*-gateway`.
+      display     = "Stateless clusters: the zone gateways offer ALPN h2 and TLS 1.3 only (Traefik's default TLS options)"
+      template    = "gateway-tls"
+      clusters    = "stateless"
+      excluded    = local.kubernetes_excluded_namespaces_with_gateways
+      values      = { configMapName = "traefik-dynamic", dataKey = "dynamic.yaml", alpnProtocols = ["h2"], minVersion = "VersionTLS13" }
       always_deny = false
     }
     h2c-upstream = {

@@ -724,6 +724,30 @@ tests:
     object: eso-objects/other-namespace-allowed.yaml
     assertions:
     - violations: 'no'
+- name: gateway-tls
+  template: ../templates/gateway-tls.yaml
+  constraint: gateway-tls/constraint.yaml
+  cases:
+  - name: h2-tls13-allowed
+    object: gateway-tls/h2-tls13-allowed.yaml
+    assertions:
+    - violations: 'no'
+  - name: other-configmap-ignored
+    object: gateway-tls/other-configmap-ignored.yaml
+    assertions:
+    - violations: 'no'
+  - name: http1-refused
+    object: gateway-tls/http1-refused.yaml
+    assertions:
+    - violations: 1
+  - name: tls12-refused
+    object: gateway-tls/tls12-refused.yaml
+    assertions:
+    - violations: 1
+  - name: no-options-refused
+    object: gateway-tls/no-options-refused.yaml
+    assertions:
+    - violations: 1
 - name: h2c-upstream
   template: ../templates/h2c-upstream.yaml
   constraint: h2c-upstream/constraint.yaml

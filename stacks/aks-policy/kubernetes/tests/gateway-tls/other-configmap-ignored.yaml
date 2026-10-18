@@ -1,0 +1,10 @@
+# Another ConfigMap of the gateway namespace (App Routing's `gateway`): not this template's business.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway
+  namespace: int-fi-gateway
+data:
+  service: |
+    spec:
+      externalTrafficPolicy: Local

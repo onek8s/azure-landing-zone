@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: traefik-dynamic
+  namespace: int-fi-gateway
+data:
+  dynamic.yaml: |
+    tls:
+      options:
+        default:
+          alpnProtocols:
+            - h2
+            - http/1.1
+          minVersion: VersionTLS13

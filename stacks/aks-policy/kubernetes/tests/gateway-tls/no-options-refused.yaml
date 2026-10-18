@@ -1,0 +1,10 @@
+# Traefik's defaults (h2, http/1.1, acme-tls/1 and TLS 1.2) would apply: refused (one finding: no default
+# options at all).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: traefik-dynamic
+  namespace: int-fi-gateway
+data:
+  dynamic.yaml: |
+    http: {}
