@@ -2,7 +2,7 @@
 # resource-specific tables (AZFWApplicationRule, AZFWNetworkRule): the Azure Monitor Agent on the VM reads labfw's
 # JSON lines (logging.file, /var/log/labfw/azfw.jsonl, the AZFW field names) into the custom table
 # LabfwFirewallLog_CL of a workspace of its own, through a data collection rule. Only denied connections by default
-# (the egress agent's input, design D59; allowed ones would cost ingestion for nothing). Readers query it with Reader
+# (the egress agent's input, design D61; allowed ones would cost ingestion for nothing). Readers query it with Reader
 # on the workspace (or the hub subscription); nothing needs to log in to the VM. The agent's own identity needs no
 # role: the rule's association authorizes it.
 locals {

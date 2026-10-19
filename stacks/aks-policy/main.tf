@@ -3,7 +3,7 @@
 # it runs on GitHub-hosted runners and applies whether or not the self-hosted runners and the AKS dev workflow are
 # up – the clusters of onek8s/aks-terraform report their compliance to these assignments. Built-in definitions
 # here; the platform's own Microsoft.Kubernetes.Data definitions (storage, zone pinning, architecture and spot,
-# FQDN egress, Gateway API only, NAP NodePools) and mutations in kubernetes.tf, tested with gator
+# FQDN egress, Gateway API only) and mutations in kubernetes.tf, tested with gator
 # (kubernetes/test.sh).
 #
 # Build tenant: every assignment uses var.policy_enforcement_mode (DoNotEnforce = audit only, section 7.1).

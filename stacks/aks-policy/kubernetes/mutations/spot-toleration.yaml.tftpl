@@ -1,7 +1,6 @@
 # Spot chosen by the application (R17, design section 2.3): a pod labelled platform/capacity: spot
-# tolerates the spot NodePools' taint, platform/capacity=spot:NoSchedule. NAP falls back to the
-# on-demand NodePool when Azure has no spot capacity. A pod-subnet cell's classic spot pools (design D74,
-# no NAP) carry AKS's own spot taint too, kubernetes.azure.com/scalesetpriority=spot:NoSchedule, which AKS
+# tolerates the spot pools' taint, platform/capacity=spot:NoSchedule; the cluster autoscaler falls back to
+# the on-demand pool when Azure has no spot capacity. The zones' classic spot pools carry AKS's own spot taint too, kubernetes.azure.com/scalesetpriority=spot:NoSchedule, which AKS
 # puts on every spot pool and cannot be left out - tolerated as well.
 apiVersion: mutations.gatekeeper.sh/v1
 kind: ModifySet

@@ -42,7 +42,7 @@ run "platform_kubernetes_policies" {
   command = plan
 
   assert {
-    condition     = length(azurerm_policy_definition.kubernetes) == 15 && alltrue([for d in azurerm_policy_definition.kubernetes : d.mode == "Microsoft.Kubernetes.Data"])
+    condition     = length(azurerm_policy_definition.kubernetes) == 14 && alltrue([for d in azurerm_policy_definition.kubernetes : d.mode == "Microsoft.Kubernetes.Data"])
     error_message = "One Microsoft.Kubernetes.Data definition per constraint template."
   }
 
@@ -101,7 +101,7 @@ run "new_definitions_stay_audit_when_enforced" {
   }
 
   assert {
-    condition     = alltrue([for k in ["zone-placement", "placement-labels", "fqdn-egress", "gateway-only", "node-pools"] : jsondecode(azurerm_subscription_policy_assignment.kubernetes[k].parameters).effect.value == "Audit"])
+    condition     = alltrue([for k in ["zone-placement", "placement-labels", "fqdn-egress", "gateway-only"] : jsondecode(azurerm_subscription_policy_assignment.kubernetes[k].parameters).effect.value == "Audit"])
     error_message = "The platform's new validations keep effect Audit until promoted."
   }
 

@@ -188,7 +188,7 @@ variable "labfw" {
     # based workflows (upgrade-lab, view-logs, e2e-lab, power-lab, vpn-peer)
     operator_principal_ids = optional(list(string), [])
     # labfw's connection log in a Log Analytics workspace (modules/labfw logs.tf) - Azure Firewall's diagnostic
-    # setting, for labfw: denied connections by default, read by the egress agent (D59) with Reader
+    # setting, for labfw: denied connections by default, read by the egress agent (D61) with Reader
     log_analytics = optional(object({
       enabled           = optional(bool, false)
       denied_only       = optional(bool, true)
@@ -268,7 +268,7 @@ variable "platform_source_fqdns" {
 variable "firewall_applications_dir" {
   type        = string
   default     = "firewall-applications"
-  description = "The directory, relative to this stack, of the per-application egress files: <env>-<exposure>/<namespace>.yaml (design D59, firewall-applications/README.md)."
+  description = "The directory, relative to this stack, of the per-application egress files: <env>-<exposure>/<namespace>.yaml (design D61, firewall-applications/README.md)."
   nullable    = false
 }
 
@@ -276,7 +276,7 @@ variable "firewall_snat_private_ranges" {
   type        = list(string)
   default     = null
   description = <<DESCRIPTION
-The Firewall Policies' SNAT private ranges (design D59): the firewall translates every allowed flow whose destination
+The Firewall Policies' SNAT private ranges (design D61): the firewall translates every allowed flow whose destination
 is outside them to its own address - public on the internet, private elsewhere. Null keeps Azure's IANA private
 ranges (RFC 1918 and 100.64.0.0/10), which leave a flow from a cell to the corporate network untranslated. Name the
 landing zone's own ranges (the hub's, the cells') to translate everything that leaves it.

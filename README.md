@@ -16,8 +16,7 @@ audit mode and a client VNet that simulates the corporate network, in **germanyw
 accelerator bootstrap stays in swedencentral). `sub-aks-dev` plays the design's internal dev subscription
 `sub-aks-dev-int` (decision D52: internal and external workloads have a subscription and clusters each); the build
 tenant has no external one now. The dev environment's cluster - one internal stateless cell
-`aks-dev-int-stateless-az2` with Finland's zone `int-fi` (Sweden's is disabled; its twin in zone 1 is disabled too,
-zone 1 not being available to the subscription), its network and Key Vaults - is
+`aks-dev-int-stateless-az3` (Azure CNI Pod Subnet) with Sweden's zone `int-se`, its network and Key Vaults - is
 [aks-terraform](https://github.com/onek8s/aks-terraform)'s, created and deleted by its pipeline in `sub-aks-dev` with
 this repository's dev apply identity, and routed through labfw in the hub (network mode `labfw`).
 
@@ -32,9 +31,9 @@ Build tenant (not connected to the corporate network)
 │            │            └─ connectivity sub-hub    hub: Firewall (firewall mode) or labfw + VPN (labfw mode) · private DNS zones
 │            │                                       client VNet (simulated corporate network)
 │            └─ landingzones ── corp      sub-aks-dev  AKS policy assignments (stacks/aks-policy)
-│                                                      onek8s/aks-terraform: vnet-dev-ext-stateless-az1/-az2 +
-│                                                      aks-dev-ext-stateless-az1/-az2 (AZ 1, 2), platform and zone
-│                                                      Key Vaults, Traffic Manager, container registry
+│                                                      onek8s/aks-terraform: vnet-dev-int-stateless-az3 +
+│                                                      aks-dev-int-stateless-az3 (AZ 3), platform and zone
+│                                                      Key Vaults, container registry
 ```
 
 | Folder | Content | Deployed by |

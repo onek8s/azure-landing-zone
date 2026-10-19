@@ -50,7 +50,6 @@ locals {
     placement-labels      = { api_groups = [""], kinds = ["Pod"], parameters = { allowedArchitectures = "Array", allowedCapacities = "Array", allowedAccelerators = "Array" }, defaults = { allowedAccelerators = [] } }
     fqdn-egress           = { api_groups = ["", "cilium.io", "networking.k8s.io"], kinds = ["Pod", "CiliumNetworkPolicy", "NetworkPolicy"], parameters = { sharedSuffixes = "Array" } }
     gateway-only          = { api_groups = ["", "gateway.networking.k8s.io"], kinds = ["Service", "Gateway", "HTTPRoute"], parameters = { zones = "Array", domainSuffix = "String" } }
-    node-pools            = { api_groups = ["karpenter.sh", "karpenter.azure.com"], kinds = ["NodePool", "AKSNodeClass"], parameters = { zones = "Array", allowedSkuSeries = "Array", allowedGpuSkuSeries = "Array", exemptNames = "Array" }, defaults = { allowedGpuSkuSeries = [] } }
     secrets-via-eso       = { api_groups = [""], kinds = ["Secret"], parameters = { zones = "Array", exemptUsers = "Array" } }
     eso-objects           = { api_groups = ["external-secrets.io"], kinds = ["SecretStore", "ExternalSecret", "PushSecret"], parameters = { zones = "Array", keyVaultNamePrefix = "String", serviceAccount = "String" } }
     service-accounts      = { api_groups = [""], kinds = ["Pod", "ServiceAccount"], parameters = { readerServiceAccount = "String" } }
@@ -134,21 +133,6 @@ locals {
       clusters    = "stateless"
       excluded    = local.kubernetes_excluded_namespaces
       values      = { zones = var.isolation_zones, domainSuffix = var.zone_domain_suffix }
-      always_deny = false
-    }
-    node-pools = {
-      display  = "Stateless clusters: NodePools and AKSNodeClasses per zone (also GPU), in its subnet, with its label, taints, VM series"
-      template = "node-pools"
-      clusters = "stateless"
-      excluded = []
-      values = {
-        zones            = var.isolation_zones
-        allowedSkuSeries = var.allowed_sku_series
-        # The zone's GPU NodePool (design decision D42)
-        allowedGpuSkuSeries = var.allowed_gpu_sku_series
-        # Created and managed by AKS itself
-        exemptNames = ["default", "system-surge"]
-      }
       always_deny = false
     }
     secrets-via-eso = {
