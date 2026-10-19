@@ -280,14 +280,14 @@ run "dev_promotions_plan" {
   command = plan
 
   variables {
-    kubernetes_deny = ["app-egress", "gateway-only", "placement-labels", "placement-labels-stateful", "secrets-via-eso", "eso-objects", "service-accounts", "rollout-guardrails", "rollout-guardrails-stateful", "vertical-pod-autoscalers", "vertical-pod-autoscalers-stateful", "namespace-ownership", "zone-placement", "gateway-tls", "k8s-no-ingress", "k8s-read-only-root-filesystem", "k8s-internal-load-balancers", "key-vault-no-public-access", "acr-admin-disabled"]
+    kubernetes_deny = ["app-egress", "gateway-only", "placement-labels", "placement-labels-stateful", "secrets-via-eso", "eso-objects", "service-accounts", "rollout-guardrails", "rollout-guardrails-stateful", "vertical-pod-autoscalers", "vertical-pod-autoscalers-stateful", "namespace-ownership", "zone-placement", "gateway-tls", "h2c-upstream", "k8s-no-ingress", "k8s-read-only-root-filesystem", "k8s-internal-load-balancers", "k8s-pod-security-restricted", "k8s-deployment-safeguards", "k8s-allowed-images", "k8s-no-service-account-token-automount", "key-vault-no-public-access", "acr-admin-disabled"]
   }
 
   assert {
     condition = alltrue([
-      for k in ["key-vault-no-public-access", "acr-admin-disabled", "k8s-internal-load-balancers"] :
+      for k in ["key-vault-no-public-access", "acr-admin-disabled", "k8s-internal-load-balancers", "k8s-pod-security-restricted", "k8s-deployment-safeguards", "k8s-allowed-images", "k8s-no-service-account-token-automount"] :
       azurerm_subscription_policy_assignment.aks[k].enforce && jsondecode(azurerm_subscription_policy_assignment.aks[k].parameters).effect.value == "Deny"
-    ]) && alltrue([for k in ["zone-placement", "gateway-tls"] : jsondecode(azurerm_subscription_policy_assignment.kubernetes[k].parameters).effect.value == "Deny"])
+    ]) && alltrue([for k in ["zone-placement", "gateway-tls", "h2c-upstream"] : jsondecode(azurerm_subscription_policy_assignment.kubernetes[k].parameters).effect.value == "Deny"])
     error_message = "dev's promoted rules deny (environments/dev/policy.tfvars)."
   }
 }

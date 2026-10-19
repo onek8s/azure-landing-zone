@@ -31,12 +31,8 @@ stateful_cluster_name       = "aks-dev-int-stateful"
 
 # Promoted from Audit to Deny (design section 2.7: audit first, then deny, rule by rule; D82: as soon as a
 # rule reports no violation): every rule here reported none, and the isolation tests' forbidden manifests check
-# that each refuses. Still in Audit, with the reason (Azure Policy compliance, 2026-10-19):
-#   k8s-pod-security-restricted      App Routing's gateway pods set no seccomp profile (AKS-managed)
-#   k8s-deployment-safeguards        probes / seccomp / images of AKS-managed and upstream platform pods
-#   k8s-allowed-images               ESO, external-dns and Flux images come from upstream registries
-#   k8s-no-service-account-token-automount, h2c-upstream   1 non-compliant cluster each
-#   k8s-image-integrity and the aks-* cluster settings      no Deny effect in their definitions (audit_only)
+# that each refuses. Still in Audit: k8s-image-integrity and the aks-* cluster settings, whose definitions have no
+# Deny effect (audit_only).
 kubernetes_deny = [
   # The platform's own validations
   # 2026-10-19: app-egress replaces fqdn-egress (design D80) in deny - no application namespace of
@@ -62,10 +58,19 @@ kubernetes_deny = [
   # namespace.
   "zone-placement",
   "gateway-tls",
+  "h2c-upstream", # 2026-10-19: 0 violations with default/kubernetes exempt by name
   # Built-in Kubernetes definitions
   "k8s-no-ingress",
   "k8s-read-only-root-filesystem",
   "k8s-internal-load-balancers", # 2026-10-19: an internal subscription (D52) has no public gateway
+  # 2026-10-19 (D82), 0 violations on aks-dev-int-stateless-az3 (Cluster status, Gatekeeper audit 19:29) once the
+  # application rules left out the platform's own namespaces as design 2.7 says (azure-landing-zone#97), aks-hello
+  # ran by digest with fsGroup and supplementalGroups (aks-fluxcd-example#42) and h2c-upstream exempted the API
+  # server's Service.
+  "k8s-pod-security-restricted",
+  "k8s-deployment-safeguards",
+  "k8s-allowed-images",
+  "k8s-no-service-account-token-automount",
   # Built-in Azure resource definitions, 2026-10-19: 0 non-compliant (3 vaults, 1 registry)
   "key-vault-no-public-access",
   "acr-admin-disabled",
