@@ -13,7 +13,10 @@ locals {
   env     = var.environment
   enforce = var.policy_enforcement_mode == "Default"
 
-  # Platform namespaces, left out of the application rules (section 2.7)
+  # AKS's and the platform's control namespaces. The application rules (pod security, deployment safeguards, images,
+  # token automount, Image Integrity) leave out every platform namespace - kubernetes_excluded_namespaces, which adds
+  # the platform's own (ESO, external-dns, observability, <zone>-gateway, <zone>-secrets) - as design section 2.7
+  # says: their upstream charts set host access, probes and images the platform does not shape.
   # aks-command: `az aks command invoke`'s pod, the break-glass path into a private cluster
   # dapr-system: the AKS Dapr extension's control plane, a lab trial on aks-terraform's az3 (design D65)
   platform_namespaces = ["kube-system", "gatekeeper-system", "azure-arc", "azure-extensions-usage-system", "flux-system", "kube-public", "aks-istio-system", "aks-command", "dapr-system"]
@@ -31,7 +34,7 @@ locals {
       description = "Kubernetes pod security restricted standards for Linux workloads"
       parameters = {
         effect             = { value = local.enforce ? "Deny" : "Audit" }
-        excludedNamespaces = { value = local.platform_namespaces }
+        excludedNamespaces = { value = local.kubernetes_excluded_namespaces }
       }
     }
     k8s-allowed-images = {
@@ -40,7 +43,7 @@ locals {
       parameters = {
         effect                      = { value = local.enforce ? "Deny" : "Audit" }
         allowedContainerImagesRegex = { value = local.allowed_images_regex }
-        excludedNamespaces          = { value = ["kube-system", "gatekeeper-system", "azure-arc", "azure-extensions-usage-system", "flux-system"] }
+        excludedNamespaces          = { value = local.kubernetes_excluded_namespaces }
       }
     }
     # Audit only until promoted to Deny (section 2.7)
@@ -49,8 +52,10 @@ locals {
       description = "Deployment safeguards: probes, resource requests and AKS best practices"
       parameters = {
         effect                      = { value = "Audit" }
-        excludedNamespaces          = { value = local.platform_namespaces }
+        excludedNamespaces          = { value = local.kubernetes_excluded_namespaces }
         allowedContainerImagesRegex = { value = local.allowed_images_regex }
+        # The volume types of the restricted Pod Security Standard; the initiative's default [] refuses every volume
+        allowedVolumeTypes = { value = ["configMap", "csi", "downwardAPI", "emptyDir", "ephemeral", "persistentVolumeClaim", "projected", "secret"] }
         # What AKS itself passes when it turns deployment safeguards on: its own identities may edit
         # nodes, and its labels and system-pool taint are reserved.
         allowedUsers   = { value = ["nodeclient", "system:serviceaccount:kube-system:aci-connector-linux", "system:serviceaccount:kube-system:node-controller", "acsService", "aksService", "system:serviceaccount:kube-system:cloud-node-manager"] }
@@ -74,7 +79,7 @@ locals {
       description = "automountServiceAccountToken false for application pods"
       parameters = {
         effect             = { value = "Audit" }
-        excludedNamespaces = { value = local.platform_namespaces }
+        excludedNamespaces = { value = local.kubernetes_excluded_namespaces }
       }
     }
     k8s-no-ingress = {
@@ -101,7 +106,7 @@ locals {
       description = "Images signed by the platform's certificate, checked by Image Integrity (Ratify) at admission (preview, audit only)"
       parameters = {
         effect             = { value = "Audit" }
-        excludedNamespaces = { value = local.platform_namespaces }
+        excludedNamespaces = { value = local.kubernetes_excluded_namespaces }
       }
     }
     aks-ssh-disabled = {

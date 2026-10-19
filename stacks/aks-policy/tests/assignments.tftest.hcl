@@ -214,12 +214,12 @@ run "an_external_subscription_has_external_zones" {
   }
 }
 
-run "h2c_upstream_exempts_only_the_flux_webhook_receiver" {
+run "h2c_upstream_exempts_only_the_flux_webhook_receiver_and_the_api_server" {
   command = plan
 
   assert {
-    condition     = jsondecode(azurerm_subscription_policy_assignment.kubernetes["h2c-upstream"].parameters).exemptServices.value == ["flux-system/webhook-receiver"]
-    error_message = "h2c-upstream should exempt Flux's webhook receiver by name and nothing else (design D78)."
+    condition     = jsondecode(azurerm_subscription_policy_assignment.kubernetes["h2c-upstream"].parameters).exemptServices.value == ["flux-system/webhook-receiver", "default/kubernetes"]
+    error_message = "h2c-upstream should exempt Flux's webhook receiver (design D78) and the API server's Service by name, nothing else."
   }
 
   assert {
