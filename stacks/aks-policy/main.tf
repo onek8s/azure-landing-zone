@@ -54,6 +54,9 @@ locals {
         effect                      = { value = "Audit" }
         excludedNamespaces          = { value = local.kubernetes_excluded_namespaces }
         allowedContainerImagesRegex = { value = local.allowed_images_regex }
+        # Its one warn-only member, printMutationsAnnotations, reports every pod a mutation changed - every
+        # application pod, by design (the zone, architecture and spot mutations): a note, not a control
+        effectForWarnOnlyPolicies = { value = "Disabled" }
         # The volume types of the restricted Pod Security Standard; the initiative's default [] refuses every volume
         allowedVolumeTypes = { value = ["configMap", "csi", "downwardAPI", "emptyDir", "ephemeral", "persistentVolumeClaim", "projected", "secret"] }
         # What AKS itself passes when it turns deployment safeguards on: its own identities may edit
