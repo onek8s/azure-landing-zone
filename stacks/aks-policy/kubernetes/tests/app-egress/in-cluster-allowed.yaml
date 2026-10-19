@@ -1,7 +1,7 @@
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
-  name: egress
+  name: in-cluster
   namespace: ext-fi-app
 spec:
   endpointSelector: {}
@@ -14,12 +14,14 @@ spec:
     - ports:
       - port: '53'
         protocol: ANY
-      rules:
-        dns:
-        - matchName: www.microsoft.com
-  - toFQDNs:
-    - matchName: api.github.com
+  - toEndpoints:
+    - matchLabels:
+        app: db
     toPorts:
     - ports:
-      - port: '443'
+      - port: '5432'
         protocol: TCP
+  - toServices:
+    - k8sService:
+        serviceName: api
+        namespace: ext-fi-app

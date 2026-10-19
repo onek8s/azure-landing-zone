@@ -6,9 +6,7 @@ metadata:
 spec:
   endpointSelector: {}
   egress:
-  - toFQDNs:
-    - matchName: kv-onek8s-dev-ext-fi.vault.azure.net
-    toPorts:
+  - toPorts:
     - ports:
       - port: '443'
         protocol: TCP

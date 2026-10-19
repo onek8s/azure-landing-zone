@@ -1,8 +1,8 @@
 # The parameters stacks/aks-policy assigns (kubernetes.tf).
 apiVersion: constraints.gatekeeper.sh/v1beta1
-kind: K8sPlatformFqdnEgress
+kind: K8sPlatformAppEgress
 metadata:
-  name: fqdn-egress
+  name: app-egress
 spec:
   match:
     kinds:
@@ -33,19 +33,3 @@ spec:
     - infra-observability
     - '*-gateway'
     - '*-secrets'
-  parameters:
-    sharedSuffixes:
-    - core.windows.net
-    - blob.core.windows.net
-    - database.windows.net
-    - servicebus.windows.net
-    - azurewebsites.net
-    - cloudapp.azure.com
-    - cloudapp.net
-    - azurecr.io
-    - azure.com
-    - windows.net
-    - amazonaws.com
-    - googleapis.com
-    - github.io
-    - githubusercontent.com

@@ -1,0 +1,20 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: in-cluster
+  namespace: ext-fi-app
+specs:
+- endpointSelector: {}
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        app: db
+- endpointSelector:
+    matchLabels:
+      app: web
+  egress:
+  - toServices:
+    - k8sServiceSelector:
+        selector:
+          matchLabels:
+            app: api

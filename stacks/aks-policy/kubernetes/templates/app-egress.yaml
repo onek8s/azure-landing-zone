@@ -1,0 +1,104 @@
+# Application policies stay inside the cluster (R20, design sections 2.7 and 5.1): the hub Firewall is
+# the one decision out of it, from the per-application rule files, and the fleet's `<zone>-firewall-egress`
+# lets a zone's application namespaces out to the world. Cilium works at layers 3 and 4 only (no ACNS,
+# design D80), so an application's own policy may only narrow traffic inside the cluster:
+#
+#   - CiliumNetworkPolicy egress only to toEndpoints and toServices with a k8sService /
+#     k8sServiceSelector; no toCIDR, toCIDRSet, toEntities, toFQDNs, toGroups, toNodes, toRequires, and
+#     no rule without a peer (toPorts alone allows every destination);
+#   - no layer 7 rules (toPorts rules: DNS, HTTP, Kafka) - they need the ACNS proxy;
+#   - no Kubernetes NetworkPolicy egress ipBlock (a rule without `to` stays allowed: AKS writes one
+#     itself, the managed namespaces' default `AllowAll` egress);
+#   - pods use the cluster DNS: dnsPolicy ClusterFirst (or unset) and no dnsConfig nameservers.
+#
+# CiliumClusterwideNetworkPolicy, CiliumCIDRGroup and CiliumEgressGatewayPolicy are cluster-wide,
+# which no application namespace's RBAC reaches.
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8splatformappegress
+  annotations:
+    description: Application network policies only inside the cluster (endpoints and Services, layers 3 and 4); pods use the cluster DNS.
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sPlatformAppEgress
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8splatformappegress
+
+        forbidden_peers := {"toCIDR", "toCIDRSet", "toEntities", "toFQDNs", "toGroups", "toNodes", "toRequires"}
+
+        in_cluster_peers := {"toEndpoints", "toServices"}
+
+        obj := input.review.object
+
+        # CiliumNetworkPolicy: spec, or every entry of specs
+        specs[spec] {
+          obj.kind == "CiliumNetworkPolicy"
+          spec := obj.spec
+        }
+
+        specs[spec] {
+          obj.kind == "CiliumNetworkPolicy"
+          spec := obj.specs[_]
+        }
+
+        violation[{"msg": msg}] {
+          rule := specs[_].egress[_]
+          peer := forbidden_peers[_]
+          rule[peer]
+          msg := sprintf("CiliumNetworkPolicy %v: egress %v is not allowed - an application's policies stay inside the cluster (toEndpoints, toServices); the hub Firewall decides what leaves it (design section 5.1).", [obj.metadata.name, peer])
+        }
+
+        violation[{"msg": msg}] {
+          rule := specs[_].egress[_]
+          not has_peer(rule)
+          msg := sprintf("CiliumNetworkPolicy %v: an egress rule without toEndpoints or toServices allows every destination - name the in-cluster peers.", [obj.metadata.name])
+        }
+
+        violation[{"msg": msg}] {
+          service := specs[_].egress[_].toServices[_]
+          not service.k8sService
+          not service.k8sServiceSelector
+          msg := sprintf("CiliumNetworkPolicy %v: toServices must name an in-cluster Service.", [obj.metadata.name])
+        }
+
+        violation[{"msg": msg}] {
+          port := specs[_].egress[_].toPorts[_]
+          port.rules
+          msg := sprintf("CiliumNetworkPolicy %v: layer 7 rules (toPorts rules) are not allowed - Cilium works at layers 3 and 4 (design D80).", [obj.metadata.name])
+        }
+
+        has_peer(rule) {
+          rule[in_cluster_peers[_]]
+        }
+
+        has_peer(rule) {
+          rule[forbidden_peers[_]]
+        }
+
+        # Kubernetes NetworkPolicy
+
+        violation[{"msg": msg}] {
+          obj.kind == "NetworkPolicy"
+          obj.spec.egress[_].to[_].ipBlock
+          msg := sprintf("NetworkPolicy %v: egress ipBlock is not allowed - an application's policies stay inside the cluster; the hub Firewall decides what leaves it.", [obj.metadata.name])
+        }
+
+        # Pods use the cluster DNS
+
+        violation[{"msg": msg}] {
+          obj.kind == "Pod"
+          policy := object.get(obj.spec, "dnsPolicy", "ClusterFirst")
+          policy != "ClusterFirst"
+          msg := sprintf("Pod %v: dnsPolicy %v - pods resolve through the cluster DNS (ClusterFirst).", [obj.metadata.name, policy])
+        }
+
+        violation[{"msg": msg}] {
+          obj.kind == "Pod"
+          count(object.get(obj.spec, ["dnsConfig", "nameservers"], [])) > 0
+          msg := sprintf("Pod %v: dnsConfig nameservers are not allowed - pods resolve through the cluster DNS.", [obj.metadata.name])
+        }

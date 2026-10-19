@@ -41,7 +41,10 @@ stateful_cluster_name       = "aks-dev-int-stateful"
 #   are public by design), k8s-image-integrity (preview, audit only)
 kubernetes_deny = [
   # The platform's own validations
-  "fqdn-egress",
+  # 2026-10-19: app-egress replaces fqdn-egress (design D80) in deny - no application namespace of
+  # aks-dev-int-stateless-az3 has a Cilium policy, and its one NetworkPolicy (AKS's
+  # defaultnetworkpolicy) passed fqdn-egress's same NetworkPolicy rule (0 violations, Cluster status).
+  "app-egress",
   "gateway-only",
   "placement-labels",
   "placement-labels-stateful",
