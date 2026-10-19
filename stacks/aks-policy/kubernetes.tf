@@ -54,7 +54,7 @@ locals {
     secrets-via-eso       = { api_groups = [""], kinds = ["Secret"], parameters = { zones = "Array", exemptUsers = "Array" } }
     eso-objects           = { api_groups = ["external-secrets.io"], kinds = ["SecretStore", "ExternalSecret", "PushSecret"], parameters = { zones = "Array", keyVaultNamePrefix = "String", serviceAccount = "String" } }
     service-accounts      = { api_groups = [""], kinds = ["Pod", "ServiceAccount"], parameters = { readerServiceAccount = "String" } }
-    h2c-upstream          = { api_groups = [""], kinds = ["Service"], parameters = { allowedAppProtocols = "Array" } }
+    h2c-upstream          = { api_groups = [""], kinds = ["Service"], parameters = { allowedAppProtocols = "Array", exemptServices = "Array" }, defaults = { exemptServices = [] } }
     gateway-tls           = { api_groups = [""], kinds = ["ConfigMap"], parameters = { configMapName = "String", dataKey = "String", alpnProtocols = "Array", minVersion = "String" } }
     rollout-guardrails = {
       api_groups = ["apps", "autoscaling", "policy"]
@@ -204,11 +204,13 @@ locals {
     }
     h2c-upstream = {
       # HTTP/2 from the gateway to the pod (design D69, D70): audit until the lab shows both hops (V28, V29).
+      # Flux's webhook receiver is the one Service that stays HTTP/1.1 (GitHub's deliveries, D78): exempt
+      # by name, so it holds even if flux-system ever leaves the excluded namespaces.
       display     = "Stateless clusters: application Service ports declare appProtocol kubernetes.io/h2c - no HTTP/1.1 from the gateway"
       template    = "h2c-upstream"
       clusters    = "stateless"
       excluded    = local.kubernetes_excluded_namespaces
-      values      = { allowedAppProtocols = ["kubernetes.io/h2c"] }
+      values      = { allowedAppProtocols = ["kubernetes.io/h2c"], exemptServices = ["flux-system/webhook-receiver"] }
       always_deny = false
     }
     rollout-guardrails = {

@@ -1,0 +1,17 @@
+# The assigned parameters without the namespace exclusions: exemptServices on its own (design D78).
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sPlatformH2cUpstream
+metadata:
+  name: h2c-upstream-without-exclusions
+spec:
+  match:
+    kinds:
+    - apiGroups:
+      - ''
+      kinds:
+      - Service
+  parameters:
+    allowedAppProtocols:
+    - kubernetes.io/h2c
+    exemptServices:
+    - flux-system/webhook-receiver

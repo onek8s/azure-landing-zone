@@ -213,3 +213,17 @@ run "an_external_subscription_has_external_zones" {
     error_message = "An external subscription gets no internal zone's mutations."
   }
 }
+
+run "h2c_upstream_exempts_only_the_flux_webhook_receiver" {
+  command = plan
+
+  assert {
+    condition     = jsondecode(azurerm_subscription_policy_assignment.kubernetes["h2c-upstream"].parameters).exemptServices.value == ["flux-system/webhook-receiver"]
+    error_message = "h2c-upstream should exempt Flux's webhook receiver by name and nothing else (design D78)."
+  }
+
+  assert {
+    condition     = jsondecode(azurerm_policy_definition.kubernetes["h2c-upstream"].parameters).exemptServices.defaultValue == []
+    error_message = "The new parameter needs a default, or Azure refuses the update of the assigned definition."
+  }
+}

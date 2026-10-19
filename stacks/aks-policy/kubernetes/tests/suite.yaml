@@ -776,6 +776,22 @@ tests:
     object: h2c-upstream/second-port-refused.yaml
     assertions:
     - violations: 1
+- name: h2c-upstream-exempt-services
+  template: ../templates/h2c-upstream.yaml
+  constraint: h2c-upstream/constraint-without-exclusions.yaml
+  cases:
+  - name: flux-webhook-receiver-allowed
+    object: h2c-upstream/flux-webhook-receiver-allowed.yaml
+    assertions:
+    - violations: 'no'
+  - name: other-flux-service-refused
+    object: h2c-upstream/other-flux-service-refused.yaml
+    assertions:
+    - violations: 1
+  - name: receiver-name-elsewhere-refused
+    object: h2c-upstream/receiver-name-elsewhere-refused.yaml
+    assertions:
+    - violations: 1
 - name: service-accounts
   template: ../templates/service-accounts.yaml
   constraint: service-accounts/constraint.yaml

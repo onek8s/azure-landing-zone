@@ -5,6 +5,11 @@
 # application namespace declares it (a custom Azure Policy definition sees only the object under
 # review, not the HTTPRoutes that reference it: no data replication). The application serves h2c on
 # the port; the kubelet's probes still use HTTP/1.1 on it until Kubernetes 1.38.
+#
+# The one exception is stated by name, not left to the namespace exclusions (design D78): Flux's webhook
+# receiver, `flux-system/webhook-receiver` of notification-controller - GitHub delivers its webhooks over
+# HTTP/1.1 and the receiver speaks nothing else, so the platform gateway's route to it stays HTTP/1.1
+# (exemptServices, `<namespace>/<name>`).
 apiVersion: templates.gatekeeper.sh/v1
 kind: ConstraintTemplate
 metadata:
@@ -25,6 +30,11 @@ spec:
               description: The appProtocol values a Service port may declare (kubernetes.io/h2c).
               items:
                 type: string
+            exemptServices:
+              type: array
+              description: Services, as <namespace>/<name>, that stay HTTP/1.1 upstream (Flux's webhook receiver, D78).
+              items:
+                type: string
   targets:
     - target: admission.k8s.gatekeeper.sh
       rego: |
@@ -32,8 +42,13 @@ spec:
 
         obj := input.review.object
 
+        exempt {
+          sprintf("%v/%v", [obj.metadata.namespace, obj.metadata.name]) == object.get(input.parameters, "exemptServices", [])[_]
+        }
+
         violation[{"msg": msg}] {
           obj.kind == "Service"
+          not exempt
           port := obj.spec.ports[_]
           object.get(port, "appProtocol", "") == ""
           msg := sprintf("Service %v port %v declares no appProtocol; set `appProtocol: kubernetes.io/h2c` and serve HTTP/2 cleartext (h2c) on it - the gateway never speaks HTTP/1.1 to a pod (design D69).", [obj.metadata.name, port_name(port)])
@@ -41,6 +56,7 @@ spec:
 
         violation[{"msg": msg}] {
           obj.kind == "Service"
+          not exempt
           port := obj.spec.ports[_]
           protocol := object.get(port, "appProtocol", "")
           protocol != ""

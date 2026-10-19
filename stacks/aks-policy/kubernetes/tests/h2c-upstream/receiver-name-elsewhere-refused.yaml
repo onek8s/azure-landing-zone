@@ -1,0 +1,11 @@
+# The exemption is the namespace and the name together: an application's Service of the same name is held to h2c.
+apiVersion: v1
+kind: Service
+metadata:
+  name: webhook-receiver
+  namespace: ext-fi-app
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
