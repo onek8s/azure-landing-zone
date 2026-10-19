@@ -237,30 +237,30 @@ management_group_settings = {
   policy_assignments_to_modify = {
     alz = {
       policy_assignments = {
-        Deny-UnmanagedDisk = { enforcement_mode = "$${policy_enforcement_mode}" }
+        Deny-UnmanagedDisk = { enforcement_mode = "Default" }
       }
     }
     platform = {
       policy_assignments = {
-        Enforce-Encrypt-CMK0    = { enforcement_mode = "$${policy_enforcement_mode}" }
-        Enforce-GR-Compute0     = { enforcement_mode = "$${policy_enforcement_mode}" }
+        Enforce-Encrypt-CMK0    = { enforcement_mode = "Default" }
+        Enforce-GR-Compute0     = { enforcement_mode = "Default" }
         Enforce-GR-ContReg0     = { enforcement_mode = "$${policy_enforcement_mode}" }
         Enforce-GR-KeyVault     = { enforcement_mode = "$${policy_enforcement_mode}" }
         Enforce-GR-KeyVaultSup0 = { enforcement_mode = "$${policy_enforcement_mode}" }
         Enforce-GR-Kubernetes0  = { enforcement_mode = "$${policy_enforcement_mode}" }
         Enforce-GR-Network0 = {
-          enforcement_mode = "$${policy_enforcement_mode}"
+          enforcement_mode = "Default"
           parameters = {
             vnetModifyDdos = "Disabled"
           }
         }
         Enforce-GR-Storage0 = {
-          enforcement_mode = "$${policy_enforcement_mode}"
+          enforcement_mode = "Default"
           parameters = {
             storageThreatProtection = "Disabled"
           }
         }
-        Enforce-Subnet-Private = { enforcement_mode = "$${policy_enforcement_mode}" }
+        Enforce-Subnet-Private = { enforcement_mode = "Default" }
       }
     }
     landingzones = {

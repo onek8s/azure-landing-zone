@@ -7,6 +7,10 @@ accelerator/config/lib/alz_library_metadata.json>
 
 Assignments removed by the archetype overrides in accelerator/config/lib are left out.
 
+Assignments named in accelerator/config/policy-deny.yaml (management group -> assignment names) get
+enforcement mode `Default` whatever `policy_enforcement_mode` says: they reported no non-compliant
+resource and deny since (OneK8s design decision D82).
+
 The output is pasted into accelerator/config/platform-landing-zone.tfvars between the
 BEGIN/END GENERATED markers by scripts/update-policy-enforcement.sh.
 """
@@ -17,6 +21,7 @@ import sys
 import yaml
 
 LOCAL_LIB = pathlib.Path(__file__).resolve().parent.parent / "accelerator" / "config" / "lib" / "archetype_definitions"
+DENY_FILE = pathlib.Path(__file__).resolve().parent.parent / "accelerator" / "config" / "policy-deny.yaml"
 
 # management group id in the alz_custom architecture -> base archetype in the ALZ library
 MANAGEMENT_GROUPS = {
@@ -45,6 +50,10 @@ PARAMETERS = {
 
 def main() -> None:
     lib = pathlib.Path(sys.argv[1]) / "platform" / "alz" / "archetype_definitions"
+    deny = yaml.safe_load(DENY_FILE.read_text()) or {}
+    unknown = set(deny) - set(MANAGEMENT_GROUPS)
+    if unknown:
+        sys.exit(f"{DENY_FILE.name}: unknown management groups {sorted(unknown)}")
     out = ["  policy_assignments_to_modify = {"]
     for mg, archetype in MANAGEMENT_GROUPS.items():
         data = json.loads((lib / f"{archetype}.alz_archetype_definition.json").read_text())
@@ -53,22 +62,26 @@ def main() -> None:
         if override.exists():
             removed = set(yaml.safe_load(override.read_text()).get("policy_assignments_to_remove") or [])
         names = sorted(set(data.get("policy_assignments", [])) - removed, key=str.lower)
+        missing = set(deny.get(mg) or []) - set(names)
+        if missing:
+            sys.exit(f"{DENY_FILE.name}: {mg} has no assignments {sorted(missing)}")
         if not names:
             continue
         out.append(f"    {mg} = {{")
         out.append("      policy_assignments = {")
         width = max(len(n) for n in names)
         for name in names:
+            mode = "Default" if name in (deny.get(mg) or []) else "$${policy_enforcement_mode}"
             parameters = PARAMETERS.get(name)
             if parameters:
                 out.append(f"        {name} = {{")
-                out.append(f'          enforcement_mode = "$${{policy_enforcement_mode}}"')
+                out.append(f'          enforcement_mode = "{mode}"')
                 out.append("          parameters = {")
                 out.extend(f'            {k} = "{v}"' for k, v in parameters.items())
                 out.append("          }")
                 out.append("        }")
             else:
-                out.append(f'        {name.ljust(width)} = {{ enforcement_mode = "$${{policy_enforcement_mode}}" }}')
+                out.append(f'        {name.ljust(width)} = {{ enforcement_mode = "{mode}" }}')
         out.append("      }")
         out.append("    }")
     out.append("  }")

@@ -358,6 +358,10 @@ resource "azurerm_subscription_policy_assignment" "kubernetes" {
       condition     = alltrue([for k in var.kubernetes_deny : contains(keys(local.k8s_validations), k) || contains(keys(local.policy_assignments), k)])
       error_message = "kubernetes_deny names a rule that is neither a platform validation nor a built-in assignment: ${join(", ", setsubtract(var.kubernetes_deny, concat(keys(local.k8s_validations), keys(local.policy_assignments))))}."
     }
+    precondition {
+      condition     = length(setintersection(var.kubernetes_deny, local.audit_only)) == 0
+      error_message = "kubernetes_deny names a built-in whose definition has no Deny effect (Audit or Disabled only): ${join(", ", setintersection(var.kubernetes_deny, local.audit_only))}."
+    }
   }
 }
 

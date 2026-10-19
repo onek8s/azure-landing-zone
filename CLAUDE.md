@@ -20,10 +20,11 @@ The one exception is named, not left to the namespace exclusions (2026-10-19, de
 ["flux-system/webhook-receiver"]` - notification-controller's Service behind the platform gateway's `/hook/` route, which
 GitHub's webhook deliveries reach over HTTP/1.1 (`<namespace>/<name>`; the definition's default is `[]`).
 
-**Policy `gateway-tls` (2026-10-18, design D70/D71, audit):** in every `*-gateway` namespace the ConfigMap `traefik-dynamic`
+**Policy `gateway-tls` (2026-10-18, design D70/D71; deny since 2026-10-19, D82):** in every `*-gateway` namespace the ConfigMap `traefik-dynamic`
 (aks-terraform `gateways/traefik`, Traefik's file-provider dynamic configuration) must state `tls.options.default` with
 `alpnProtocols` exactly `[h2]` and `minVersion: VersionTLS13` - HTTP/2 and TLS 1.3 only at the edge, read back so it cannot
-drift. `yaml.unmarshal` works in Gatekeeper's Rego (gator v3.21.1). Promote with `h2c-upstream` after V29/V30.
+drift. `yaml.unmarshal` works in Gatekeeper's Rego (gator v3.21.1). Promoted alone (0 violations); `h2c-upstream` follows once
+it reports none.
 
 **ALZ assignments (2026-10-19, the user):** only those for what the AKS platform runs on stay assigned; Defender for
 Cloud / Endpoint is not used (a third-party security tool, design D81) - its assignments are removed, Defender for
@@ -32,4 +33,5 @@ Storage is `Disabled` inside `Enforce-GR-Storage0`, and Defender for Cloud's own
 reappears. Non-AKS build tenant resources (bootstrap state, management and hub subnets, labfw) are exempt from the
 platform guardrails in `stacks/platform-extensions/main.policy.exemptions.tf`. Key Vault purge protection is assigned
 in prd only. The user's rule: **every policy goes to Deny (enforcement `Default`) once it shows 0 non-compliant
-resources.**
+resources** (D82): ALZ assignments in `accelerator/config/policy-deny.yaml` (then `scripts/update-policy-enforcement.sh`,
+`scripts/sync-platform.sh`), AKS rules in `kubernetes_deny`. An assignment that evaluates nothing waits until it has.

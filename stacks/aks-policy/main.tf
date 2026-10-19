@@ -18,6 +18,9 @@ locals {
   # dapr-system: the AKS Dapr extension's control plane, a lab trial on aks-terraform's az3 (design D65)
   platform_namespaces = ["kube-system", "gatekeeper-system", "azure-arc", "azure-extensions-usage-system", "flux-system", "kube-public", "aks-istio-system", "aks-command", "dapr-system"]
 
+  # Built-in definitions whose only effects are Audit and Disabled: never in var.kubernetes_deny
+  audit_only = ["k8s-image-integrity", "aks-ssh-disabled", "aks-azure-cni", "aks-workload-identity", "aks-azure-policy-add-on", "aks-private-cluster", "aks-local-accounts-disabled", "aks-encryption-at-host", "aks-cmk-disks"]
+
   # Images by digest from the environment's ACR only
   allowed_images_regex = "^${var.container_registry_name}\\.azurecr\\.io/[^@]+@sha256:[a-f0-9]{64}$"
 
@@ -116,7 +119,8 @@ locals {
       description = "Workload identity enabled (section 2.5)"
       parameters  = { effect = { value = "Audit" } }
     }
-    # Cluster resources
+    # Cluster resources. The built-ins in local.audit_only offer only Audit or Disabled: Azure has no deny
+    # effect for them, so they audit in every mode.
     aks-azure-policy-add-on = {
       id          = "/providers/Microsoft.Authorization/policyDefinitions/0a15ec92-a229-4763-bb14-0ea34a568f8d"
       description = "Azure Policy add-on installed on every cluster"
@@ -125,22 +129,22 @@ locals {
     aks-private-cluster = {
       id          = "/providers/Microsoft.Authorization/policyDefinitions/040732e8-d947-40b8-95d6-854c95024bf8"
       description = "Private API server"
-      parameters  = { effect = { value = local.enforce ? "Deny" : "Audit" } }
+      parameters  = { effect = { value = "Audit" } }
     }
     aks-local-accounts-disabled = {
       id          = "/providers/Microsoft.Authorization/policyDefinitions/993c2fcd-2b29-49d2-9eb0-df2c3a730c32"
       description = "Entra ID only, no local accounts"
-      parameters  = { effect = { value = local.enforce ? "Deny" : "Audit" } }
+      parameters  = { effect = { value = "Audit" } }
     }
     aks-encryption-at-host = {
       id          = "/providers/Microsoft.Authorization/policyDefinitions/41425d9f-d1a5-499a-9932-f8ed8453932c"
       description = "Encryption at host on every node (section 4.2)"
-      parameters  = { effect = { value = local.enforce ? "Deny" : "Audit" } }
+      parameters  = { effect = { value = "Audit" } }
     }
     aks-cmk-disks = {
       id          = "/providers/Microsoft.Authorization/policyDefinitions/7d7be79c-23ba-4033-84dd-45e2a5ccdd67"
       description = "OS and data disks with customer-managed keys (section 4.2)"
-      parameters  = { effect = { value = local.enforce ? "Deny" : "Audit" } }
+      parameters  = { effect = { value = "Audit" } }
     }
     # Key Vault and ACR
     # Production only (the user, 2026-10-19): dev and acc vaults are rebuilt with their cells, and a purge-protected
