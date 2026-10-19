@@ -28,3 +28,5 @@ spec:
   parameters:
     allowedAppProtocols:
     - kubernetes.io/h2c
+    exemptServices:
+    - flux-system/webhook-receiver

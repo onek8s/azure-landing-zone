@@ -16,6 +16,9 @@ allow-lists - never edit them by hand; regenerate them after a change to a rule 
 (the `kubernetes_excluded_namespaces` left out) declares `appProtocol: kubernetes.io/h2c`, so the zone gateway speaks
 HTTP/2 to the pod, never HTTP/1.1. Promote to `kubernetes_deny` once Cluster status shows 0 violations on a running
 cell with aks-fluxcd-example #37 synced (boot-log's busybox Service is the known finding in cells that run it).
+The one exception is named, not left to the namespace exclusions (2026-10-19, design D78): `exemptServices =
+["flux-system/webhook-receiver"]` - notification-controller's Service behind the platform gateway's `/hook/` route, which
+GitHub's webhook deliveries reach over HTTP/1.1 (`<namespace>/<name>`; the definition's default is `[]`).
 
 **Policy `gateway-tls` (2026-10-18, design D70/D71, audit):** in every `*-gateway` namespace the ConfigMap `traefik-dynamic`
 (aks-terraform `gateways/traefik`, Traefik's file-provider dynamic configuration) must state `tls.options.default` with
