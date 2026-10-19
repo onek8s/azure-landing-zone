@@ -1,0 +1,16 @@
+# ALZ assignments in Deny (enforcement mode Default) whatever policy_enforcement_mode says - OneK8s design decision
+# D82: an assignment denies as soon as it evaluates resources and reports none non-compliant (the user,
+# 2026-10-19). scripts/generate-policy-enforcement.py reads this file; run scripts/update-policy-enforcement.sh and
+# scripts/sync-platform.sh after a change. Not here yet: the assignments that evaluate no resource (no subscription
+# below them, or none of their resource types) - they deny once they have audited something and found it compliant.
+#
+# 2026-10-19, after the Defender and non-AKS assignments went and the build tenant's own resources were exempted
+# (Azure Policy compliance, management group alz): every one of these 0 non-compliant.
+alz:
+  - Deny-UnmanagedDisk # 6 resources
+platform:
+  - Enforce-Encrypt-CMK0   # 3 resources
+  - Enforce-GR-Compute0    # 1
+  - Enforce-GR-Network0    # 27
+  - Enforce-GR-Storage0    # 5
+  - Enforce-Subnet-Private # 10
