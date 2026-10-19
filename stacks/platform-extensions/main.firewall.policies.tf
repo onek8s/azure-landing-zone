@@ -32,12 +32,10 @@ locals {
 
   firewall_all_cells = [for key, s in local.firewall_spokes : azurerm_ip_group.policy_cells[key].id]
 
-  # Per application, what it may reach outside the landing zone (design D59): one file per application namespace,
+  # Per application, what it may reach outside the landing zone (design section 5.2): one file per application namespace,
   # firewall-applications/<env>-<exposure>/<namespace>.yaml - written by the egress agent's pull requests
   # (onek8s/aks-ai-agents) from the flows the firewall denied, reviewed by the platform and security. The source
-  # is the application's zone: its pods have addresses of the zone's pod subnet only in a cell without an
-  # overlay (aks-terraform pod_network = "pod-subnet"), so the firewall tells the zones apart, not the applications
-  # within one - the rule's name says whose it is.
+  # is the application's zone (its pods have addresses of the zone's pod subnet): the rule's name says whose it is.
   firewall_application_files = !local.firewall_policies ? [] : [
     for f in fileset("${path.module}/${var.firewall_applications_dir}", "*/*.yaml") : f if contains(keys(local.firewall_spokes), split("/", f)[0])
   ]
@@ -140,7 +138,7 @@ resource "azurerm_firewall_policy" "parent" {
   location                 = var.location
   sku                      = "Premium"
   threat_intelligence_mode = "Deny"
-  # SNAT (design D59): the firewall translates every allowed flow to a destination outside these ranges - to its
+  # SNAT (design D61): the firewall translates every allowed flow to a destination outside these ranges - to its
   # public address on the internet, to its own private address elsewhere (the corporate network) - so the cells'
   # addresses, 100.64.0.0/10 among them, never leave the landing zone. Null: Azure's IANA private ranges.
   private_ip_ranges = var.firewall_snat_private_ranges
@@ -477,7 +475,7 @@ resource "azurerm_firewall_policy_rule_collection_group" "exposure_environment" 
     }
   }
 
-  # Per application (design D59): what each application of the environment may reach, from its zone, as its
+  # Per application (design D61): what each application of the environment may reach, from its zone, as its
   # firewall-applications/<spoke>/<namespace>.yaml says
   dynamic "application_rule_collection" {
     for_each = length(local.firewall_application_rules[each.key]) > 0 ? [1] : []

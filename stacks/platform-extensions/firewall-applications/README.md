@@ -18,6 +18,6 @@ egress:
 ```
 
 The files are written by the egress agent of onek8s/aks-ai-agents: it reads the flows the firewall denied, finds
-the pod behind each source address (a cell without an overlay keeps pod addresses up to the firewall), and opens
+the pod behind each source address (the pods keep their addresses up to the firewall), and opens
 a pull request adding the destination to that application's file. A human of the platform and security reviews
 and merges it; the Platform workflow applies it, and labfw (or the hub's Azure Firewall) enforces it within minutes.

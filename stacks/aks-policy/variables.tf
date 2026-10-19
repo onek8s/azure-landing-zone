@@ -72,18 +72,6 @@ variable "stateful_cluster_name" {
   description = "The environment's stateful cluster (at most one, R9), left out of the stateless rules - whether it exists yet or not."
 }
 
-variable "allowed_sku_series" {
-  type        = list(string)
-  default     = ["Ds_v5", "Ds_v6", "Es_v5", "Es_v6", "Dps_v6", "Eps_v6"]
-  description = "VM series (karpenter.azure.com/sku-series) a zone's NAP NodePools may use: amd64 and arm64 series that support Azure Virtual Network encryption (design section 2.3)."
-}
-
-variable "allowed_gpu_sku_series" {
-  type        = list(string)
-  default     = ["NCads_v5", "NCadis_v5"]
-  description = "VM series (karpenter.azure.com/sku-series) a zone's GPU NodePool may use: NVIDIA H100 v5 (NC40ads_H100_v5, NC80adis_H100_v5), the GPU VMs that support Azure Virtual Network encryption and encryption at host (design decision D42)."
-}
-
 variable "key_vault_name_prefix" {
   type        = string
   description = "The environment's Key Vault names without their suffix: the zone vaults are <prefix>-<zone>, the platform vault <prefix>-platform (onek8s/aks-terraform shared/envs/*.tfvars). The ESO rules allow a zone's SecretStores these two only."

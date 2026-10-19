@@ -332,7 +332,7 @@ run "labfw_mode" {
   }
 
   assert {
-    condition     = alltrue([for p in ["10.0.0.0/22", "10.0.8.0/22", "10.200.0.0/22", "172.22.16.0/24", "172.22.17.0/24", "172.20.2.0/26"] : contains(module.labfw[0].dns_clients, p)])
+    condition     = alltrue([for p in ["10.0.0.0/22", "10.0.8.0/22", "10.200.0.0/22", "10.100.0.0/24", "10.100.2.0/24", "172.20.2.0/26"] : contains(module.labfw[0].dns_clients, p)])
     error_message = "labfw serves (DNS proxy, NSG) the hub, the management and client VNets and every cell of firewall_exposures."
   }
 
@@ -341,7 +341,7 @@ run "labfw_mode" {
       contains(module.labfw[0].dns_clients, "100.64.0.0/20") && contains(module.labfw[0].dns_clients, "100.64.32.0/20") &&
       output.labfw.log_analytics.table == "LabfwFirewallLog_CL"
     )
-    error_message = "labfw serves the firewall-egress cell (100.64.0.0/16, D59) and ships its log of denied connections to Log Analytics."
+    error_message = "labfw serves the firewall-egress cell (100.64.0.0/16, D61) and ships its log of denied connections to Log Analytics."
   }
 
   assert {

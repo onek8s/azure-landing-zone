@@ -127,8 +127,8 @@ there across Platform runs, which only rewrite the Terraform list in `config.yam
 - The platform's one DNS domain, `onek8s.lol` (`dns_domain` in `environments/dev`), never the corporate one. Its
   zone is [aks-terraform](https://github.com/onek8s/aks-terraform)'s, public or private (`dns_zone_private`
   there); the lab's is the public zone of step 3b, which Let's Encrypt validates against.
-- vCPU quota in the region for the system pools (2 cells × 3 × D4ds_v5) and the NAP VM families, and the
-  region must offer availability zones 1–3, API Server VNet Integration and NAP.
+- vCPU quota in the region for the system pools and the zones' node pool VM families (the lab: Daldv6 8,
+  low-priority 3), and an availability zone the subscription may use.
 
 ## 1. Fill in the IDs
 
@@ -299,13 +299,13 @@ Run the **AKS policy** workflow (also on every change to `stacks/aks-policy`): i
 `sub-aks-dev`, where every cluster with the Azure Policy add-on reports its compliance. Then deploy the clusters
 from [onek8s/aks-terraform](https://github.com/onek8s/aks-terraform): its **Deploy** workflow applies `dev-shared`
 (the cells' networks, the platform and zone Key Vaults, the internal zones' private DNS, the container registry,
-Traffic Manager) and then each cell, `dev-ext-stateless-az1` and `dev-ext-stateless-az2`; its **Renew Certificate**
+Traffic Manager) and then the cell, `dev-int-stateless-az3`; its **Renew Certificate**
 workflow issues the gateways' certificates. A cell takes roughly 15–20 minutes. Its **Cluster status** workflow
 reports what runs inside a cell.
 
 ## 8. Phase 1 exit criterion: create and delete a cell by the pipeline
 
-aks-terraform: Actions → **Deploy** → `dev-ext-stateless-az2`, `destroy`. Then the same with `apply` and
+aks-terraform: Actions → **Deploy** → `dev-int-stateless-az3`, `destroy`. Then the same with `apply` and
 `allow_empty_state`: the cell is rebuilt from IaC (new OIDC issuer, federated credentials replaced, its keys
 created again in the platform vault) and Flux brings back everything inside it.
 

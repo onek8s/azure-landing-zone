@@ -6,7 +6,7 @@ subscription_id = "3b9f032a-0165-4b8c-9e1e-d7a664c661a8" # sub-aks-dev
 # Internal and external workloads have a subscription and clusters each (design decision D52).
 # sub-aks-dev plays sub-aks-dev-int since 2026-10-15: its clusters hold the internal zones only, so the zone
 # policies know only those - a namespace or pod naming an external zone is refused here. Both countries are
-# enabled: Finland's int-fi in az2, Sweden's int-se (since 2026-10-15) in az3, the firewall-egress cell (D59).
+# enabled; the lab's one cell, az3, runs Sweden's int-se.
 exposure        = "int"
 isolation_zones = ["int-fi", "int-se"]
 
@@ -26,7 +26,7 @@ key_vault_name_prefix = "kv-onek8s-gwc"
 # clusters are stateless or stateful, as onek8s/aks-terraform names them (envs/*.tfvars)
 zone_domain_suffix          = "dev.onek8s.lol"
 cluster_resource_group_name = "rg-aks-dev"
-stateless_cluster_names     = ["aks-dev-int-stateless-az1", "aks-dev-int-stateless-az2", "aks-dev-int-stateless-az3"] # az1 disabled (zone 1 not available); az3 without an overlay (D59)
+stateless_cluster_names     = ["aks-dev-int-stateless-az3"]
 stateful_cluster_name       = "aks-dev-int-stateful"
 
 # Promoted from Audit to Deny (design section 2.7: audit first, then deny, rule by rule): every rule
@@ -43,7 +43,6 @@ kubernetes_deny = [
   # The platform's own validations
   "fqdn-egress",
   "gateway-only",
-  "node-pools",
   "placement-labels",
   "placement-labels-stateful",
   "secrets-via-eso",

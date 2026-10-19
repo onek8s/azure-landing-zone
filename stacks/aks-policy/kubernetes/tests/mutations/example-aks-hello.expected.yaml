@@ -3,13 +3,6 @@ affinity:
     preferredDuringSchedulingIgnoredDuringExecution:
     - preference:
         matchExpressions:
-        - key: karpenter.sh/capacity-type
-          operator: In
-          values:
-          - spot
-      weight: 50
-    - preference:
-        matchExpressions:
         - key: kubernetes.azure.com/scalesetpriority
           operator: In
           values:
