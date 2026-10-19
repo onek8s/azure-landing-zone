@@ -357,18 +357,6 @@ resource "azurerm_firewall_policy_rule_collection_group" "aks" {
       }
     }
 
-    rule {
-      name             = "defender-for-containers"
-      source_ip_groups = [azurerm_ip_group.frontend[each.key].id]
-      destination_fqdns = [
-        "*.cloud.defender.microsoft.com",
-      ]
-      protocols {
-        type = "Https"
-        port = 443
-      }
-    }
-
     # Lab: public environment ACR (no private endpoint). Without a dedicated data endpoint the image layers are
     # served from the registry's storage accounts.
     dynamic "rule" {

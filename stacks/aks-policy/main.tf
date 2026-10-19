@@ -143,6 +143,8 @@ locals {
       parameters  = { effect = { value = local.enforce ? "Deny" : "Audit" } }
     }
     # Key Vault and ACR
+    # Production only (the user, 2026-10-19): dev and acc vaults are rebuilt with their cells, and a purge-protected
+    # vault keeps its name for the whole retention period
     key-vault-purge-protection = {
       id          = "/providers/Microsoft.Authorization/policyDefinitions/0b60c0b2-2dc2-4e1c-b5c9-abbed971de53"
       description = "Purge protection on every vault"
@@ -162,7 +164,7 @@ locals {
 }
 
 resource "azurerm_subscription_policy_assignment" "aks" {
-  for_each             = local.policy_assignments
+  for_each             = { for k, v in local.policy_assignments : k => v if k != "key-vault-purge-protection" || local.env == "prd" }
   name                 = "aks-${local.env}-${each.key}"
   display_name         = "AKS ${local.env}: ${each.value.description}"
   subscription_id      = "/subscriptions/${var.subscription_id}"

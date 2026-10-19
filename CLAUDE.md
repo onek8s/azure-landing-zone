@@ -24,3 +24,12 @@ GitHub's webhook deliveries reach over HTTP/1.1 (`<namespace>/<name>`; the defin
 (aks-terraform `gateways/traefik`, Traefik's file-provider dynamic configuration) must state `tls.options.default` with
 `alpnProtocols` exactly `[h2]` and `minVersion: VersionTLS13` - HTTP/2 and TLS 1.3 only at the edge, read back so it cannot
 drift. `yaml.unmarshal` works in Gatekeeper's Rego (gator v3.21.1). Promote with `h2c-upstream` after V29/V30.
+
+**ALZ assignments (2026-10-19, the user):** only those for what the AKS platform runs on stay assigned; Defender for
+Cloud / Endpoint is not used (a third-party security tool, design D81) - its assignments are removed, Defender for
+Storage is `Disabled` inside `Enforce-GR-Storage0`, and Defender for Cloud's own `SecurityCenterBuiltIn` assignment
+(created outside Terraform per subscription) was deleted with aks-terraform's Lab admin; delete it again if it
+reappears. Non-AKS build tenant resources (bootstrap state, management and hub subnets, labfw) are exempt from the
+platform guardrails in `stacks/platform-extensions/main.policy.exemptions.tf`. Key Vault purge protection is assigned
+in prd only. The user's rule: **every policy goes to Deny (enforcement `Default`) once it shows 0 non-compliant
+resources.**

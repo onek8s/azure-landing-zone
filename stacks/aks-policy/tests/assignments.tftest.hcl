@@ -227,3 +227,25 @@ run "h2c_upstream_exempts_only_the_flux_webhook_receiver" {
     error_message = "The new parameter needs a default, or Azure refuses the update of the assigned definition."
   }
 }
+
+run "purge_protection_only_in_production" {
+  command = plan
+
+  assert {
+    condition     = !contains(keys(azurerm_subscription_policy_assignment.aks), "key-vault-purge-protection")
+    error_message = "dev: no purge protection policy (production only)."
+  }
+}
+
+run "purge_protection_in_production" {
+  command = plan
+
+  variables {
+    environment = "prd"
+  }
+
+  assert {
+    condition     = contains(keys(azurerm_subscription_policy_assignment.aks), "key-vault-purge-protection")
+    error_message = "prd: purge protection on every vault."
+  }
+}

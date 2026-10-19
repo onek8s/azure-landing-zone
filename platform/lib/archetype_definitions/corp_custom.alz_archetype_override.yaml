@@ -2,10 +2,18 @@ base_archetype: corp
 name: corp_custom
 policy_assignments_to_add: []
 policy_assignments_to_remove: [
-  # Lab: the hub has only the Key Vault and ACR private link zones (private_link_private_dns_zones in
-  # platform-landing-zone.tfvars); the policy and its role assignments target all ~90 ALZ zones. The AKS
-  # stacks register their private endpoints in the zones themselves. Remove this line with all zones.
+# Only the ALZ assignments that govern what the AKS platform runs on are assigned (2026-10-19): AKS, its nodes'
+# compute and disks, the networks (VNets, subnets, NSGs, route tables, NICs, public IPs, private endpoints and DNS),
+# Key Vault, the container registry, storage and encryption. Assignments for services the platform does not use,
+# for virtual machine operations it does not run (backup, update management, guest configuration) and for generic
+# governance are removed. Microsoft Defender is not used (a third-party security tool instead, OneK8s design
+# decision D81): every Defender for Cloud and Defender for Endpoint assignment is removed too.
+# Lab: the hub has only the Key Vault and ACR private link zones (private_link_private_dns_zones in
+# platform-landing-zone.tfvars); the policy and its role assignments target all ~90 ALZ zones. The AKS
+# stacks register their private endpoints in the zones themselves. Remove this line with all zones.
   Deploy-Private-DNS-Zones,
+# Hybrid networking (vWAN, ExpressRoute and VPN gateways) is the hub's, not the AKS platform's:
+  Deny-HybridNetworking,
 ]
 policy_definitions_to_add: []
 policy_definitions_to_remove: []

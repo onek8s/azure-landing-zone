@@ -2,13 +2,33 @@ base_archetype: root
 name: root_custom
 policy_assignments_to_add: []
 policy_assignments_to_remove: [
-# No monitoring in the lab for now (observability comes later): no Log Analytics workspace, no Azure Monitor Agent
-# identity and no data collection rules (management_resources_enabled = false in platform-landing-zone.tfvars), so
-# the ALZ assignments that send data to them or point at them are not assigned. Assign them again together with
-# the management resources.
+# Only the ALZ assignments that govern what the AKS platform runs on are assigned (2026-10-19): AKS, its nodes'
+# compute and disks, the networks (VNets, subnets, NSGs, route tables, NICs, public IPs, private endpoints and DNS),
+# Key Vault, the container registry, storage and encryption. Assignments for services the platform does not use,
+# for virtual machine operations it does not run (backup, update management, guest configuration) and for generic
+# governance are removed. Microsoft Defender is not used (a third-party security tool instead, OneK8s design
+# decision D81): every Defender for Cloud and Defender for Endpoint assignment is removed too.
+# Microsoft Defender for Cloud and Defender for Endpoint (design D81):
+  Deploy-ASC-Monitoring,
+  Deploy-MCSB2-Monitoring,
+  Deploy-MDEndpoints,
+  Deploy-MDEndpointsAMA,
+  Deploy-MDFC-Config-H224,
+  Deploy-MDFC-OssDb,
+  Deploy-MDFC-SqlAtp,
+# No Log Analytics workspace, Azure Monitor Agent identity or data collection rules in the build tenant
+# (management_resources_enabled = false); the platform observes itself with Grafana Cloud (design 6.2):
   Deploy-AzActivity-Log,
   Deploy-Diag-LogsCat,
-  Deploy-MDFC-Config-H224,
+# Generic governance, not the AKS platform's:
+  Audit-ResourceRGLocation,
+  Audit-UnusedResources,
+  Audit-ZoneResiliency,
+  Deny-Classic-Resources,
+  Deploy-SvcHealth-BuiltIn,
+# Virtual machine guest configuration and Trusted Launch (AKS nodes are scale sets AKS manages):
+  Audit-TrustedLaunch,
+  Enforce-ACSB,
 ]
 policy_definitions_to_add: []
 policy_definitions_to_remove: []

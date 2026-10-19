@@ -1,7 +1,16 @@
 base_archetype: sandbox
 name: sandbox_custom
 policy_assignments_to_add: []
-policy_assignments_to_remove: []
+policy_assignments_to_remove: [
+# Only the ALZ assignments that govern what the AKS platform runs on are assigned (2026-10-19): AKS, its nodes'
+# compute and disks, the networks (VNets, subnets, NSGs, route tables, NICs, public IPs, private endpoints and DNS),
+# Key Vault, the container registry, storage and encryption. Assignments for services the platform does not use,
+# for virtual machine operations it does not run (backup, update management, guest configuration) and for generic
+# governance are removed. Microsoft Defender is not used (a third-party security tool instead, OneK8s design
+# decision D81): every Defender for Cloud and Defender for Endpoint assignment is removed too.
+# No subscription in this management group:
+  Enforce-ALZ-Sandbox,
+]
 policy_definitions_to_add: []
 policy_definitions_to_remove: []
 policy_set_definitions_to_add: []
