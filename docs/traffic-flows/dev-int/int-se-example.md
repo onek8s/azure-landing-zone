@@ -10,18 +10,18 @@ the zone's allow-list and the cells' settings. Do not edit by hand: the next run
 | Team, contact | example, https://github.com/onek8s/aks-fluxcd-example/issues |
 | Configuration | [onek8s/aks-fluxcd-example / firewall-egress](https://github.com/onek8s/aks-fluxcd-example/tree/main/firewall-egress) |
 | Cells | `aks-dev-int-stateless-az3` |
-| Egress model | node subnet: the firewall sees the pod's own address (design 22, model C) |
+| Egress model | pod subnet + Cilium FQDN policies: the firewall sees the pod's own address |
 
 ```mermaid
 flowchart LR
     client["Corporate network and VPN clients"]
-    subgraph CELL["Cell aks-dev-int-stateless-az3 - node subnet: the firewall sees the pod's own address (design 22, model C)"]
+    subgraph CELL["Cell aks-dev-int-stateless-az3 - pod subnet + Cilium FQDN policies: the firewall sees the pod's own address"]
         direction LR
         gw["Gateway int-se-gateway/int-se<br/>hello-aks-dev-int-stateless-az3.int-se.dev.onek8s.lol<br/>hello.int-se.dev.onek8s.lol"]
         subgraph NS["namespace int-se-example - team example"]
             direction TB
             svc_aks_hello["Service aks-hello"]
-            wl_aks_hello["Deployment aks-hello x2<br/>acronek8sdev.azurecr.io/aks-hello:0.5.0"]
+            wl_aks_hello["Deployment aks-hello x2<br/>acronek8sdev.azurecr.io/aks-hello:0.6.0"]
         end
         dns["CoreDNS"]
         eso["ESO int-se - Key Vault share int-se-example--*"]
@@ -77,7 +77,7 @@ configuration names it.
 
 | Workload | Replicas | Images | URLs in its environment |
 |---|---|---|---|
-| Deployment `aks-hello` | 2 | `acronek8sdev.azurecr.io/aks-hello:0.5.0` | `WEATHER_URL`: `https://api.open-meteo.com` |
+| Deployment `aks-hello` | 2 | `acronek8sdev.azurecr.io/aks-hello:0.6.0` | `WEATHER_URL`: `https://api.open-meteo.com` |
 
 ## Legend
 

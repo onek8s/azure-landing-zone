@@ -8,38 +8,39 @@ the zone's allow-list and the cells' settings. Do not edit by hand: the next run
 |---|---|
 | Isolation zone | `int-fi` |
 | Team, contact | example, https://github.com/onek8s/aks-fluxcd-example/issues |
-| Configuration | [onek8s/aks-fluxcd-example / firewall-egress-int-fi](https://github.com/onek8s/aks-fluxcd-example/tree/main/firewall-egress-int-fi) |
-| Cells | `aks-dev-int-stateful` (not running), `aks-dev-int-stateless-az1` (not running), `aks-dev-int-stateless-az2` |
-| Egress model | overlay + hub firewall only: the firewall sees the zone's node addresses (model A) |
+| Configuration | [onek8s/aks-fluxcd-example / apps](https://github.com/onek8s/aks-fluxcd-example/tree/main/apps) |
+| Cells | `aks-dev-int-stateful` (not running) |
+| Egress model | - |
 
 ```mermaid
 flowchart LR
     client["Corporate network and VPN clients"]
-    subgraph CELL["Cell aks-dev-int-stateless-az2 - overlay + hub firewall only: the firewall sees the zone's node addresses (model A)"]
+    subgraph CELL["Cell aks-dev-int-stateful - pod subnet + Cilium FQDN policies: the firewall sees the pod's own address"]
         direction LR
-        gw["Gateway int-fi-gateway/int-fi<br/>hello-aks-dev-int-stateless-az2.int-fi.dev.onek8s.lol<br/>hello.int-fi.dev.onek8s.lol"]
+        gw["Gateway int-fi-gateway/int-fi<br/>hello-aks-dev-int-stateful.int-fi.dev.onek8s.lol"]
         subgraph NS["namespace int-fi-example - team example"]
             direction TB
             svc_aks_hello["Service aks-hello"]
-            wl_aks_hello["Deployment aks-hello x2<br/>acronek8sdev.azurecr.io/aks-hello:0.5.0"]
+            svc_boot_log["Service boot-log"]
+            wl_aks_hello["Deployment aks-hello x2<br/>acronek8sdev.azurecr.io/aks-hello:0.6.0"]
+            wl_boot_log["Deployment boot-log x1<br/>docker.io/library/busybox:1.37.0"]
         end
         dns["CoreDNS"]
         eso["ESO int-fi - Key Vault share int-fi-example--*"]
     end
-    fw["Hub firewall<br/>rule collection group dev-int-applications"]
+    fw["Hub firewall"]
     subgraph OUT["Outside the landing zone"]
         direction TB
-        d_api_ipify_org["api.ipify.org:443"]
-        d_api_open_meteo_com["api.open-meteo.com:443"]
     end
     client --> gw
     gw --> svc_aks_hello
+    gw --> svc_boot_log
     svc_aks_hello --> wl_aks_hello
+    svc_aks_hello --> wl_boot_log
+    svc_boot_log --> wl_aks_hello
+    svc_boot_log --> wl_boot_log
     wl_aks_hello --> dns
     eso -.->|"Secrets"| wl_aks_hello
-    wl_aks_hello -->|"every flow leaving the cluster"| fw
-    fw -->|"allowed"| d_api_ipify_org
-    fw -->|"allowed"| d_api_open_meteo_com
     classDef ns fill:#e3f2fd,stroke:#1565c0,color:#000
     classDef platform fill:#eceff1,stroke:#455a64,color:#000
     classDef fw fill:#ede7f6,stroke:#5e35b1,color:#000
@@ -50,8 +51,7 @@ flowchart LR
     classDef zone fill:#e0f2f1,stroke:#00695c,color:#000
     class gw,dns,eso platform
     class fw fw
-    class svc_aks_hello,wl_aks_hello ns
-    class d_api_ipify_org,d_api_open_meteo_com allowed
+    class svc_aks_hello,svc_boot_log,wl_aks_hello,wl_boot_log ns
 ```
 
 ## Egress: what leaves the cluster, and who asked for it
@@ -62,8 +62,7 @@ names it.
 
 | Destination | Port | Status | Rule | Why (from the rule) | Named in the configuration | Evidence |
 |---|---|---|---|---|---|---|
-| `api.ipify.org` | 443/https | allowed - the application's rule, named in its configuration | `dev-int-applications/int-fi-example-https-443` | aks-hello 0.5.0 fetches the public IP from api.ipify.org once at start, as configured in firewall-egress-int-fi/kustomization.yaml line 7-8. | mentioned in firewall-egress-int-fi/kustomization.yaml | 6 denied flows from pod aks-hello-77db47cfcd-bbfv9 in namespace int-fi-example on cluster aks-dev-int-stateless-az2, first seen 2026-10-16T09:12:57Z, last seen 2026-10-16T09:13:11Z<br/>The flow was denied by the hub firewall, which saw the node address (viaNode: true). |
-| `api.open-meteo.com` | 443/https | allowed - the application's rule, named in its configuration | `dev-int-applications/int-fi-example-https-443` | aks-hello 0.4.1 fetches a Helsinki weather forecast from the internet (api.open-meteo.com) as described in apps/firewall-egress-int-fi/kustomization.yaml | Deployment aks-hello, WEATHER_URL<br/>mentioned in firewall-egress-int-fi/kustomization.yaml | 8 denied flows from pod aks-hello-895fcf8f8-jzfg6 in namespace int-fi-example on cluster aks-dev-int-stateless-az2, first seen 2026-10-16T04:43:17Z, last seen 2026-10-16T04:49:17Z<br/>The destination is named in apps/firewall-egress-int-fi/kustomization.yaml, line 6-10<br/>The flow was denied by the hub firewall, which saw the node address (viaNode: true).<br/>The application configuration names this destination. |
+| - | | nothing leaves the cluster: no rule, and the configuration names no destination | | | | |
 
 The zone's allow-list and the platform's rules (open to every application of the zone, resp. from every cell)
 are on the [zone's page](zone-int-fi.md); a name of theirs appears above only when this application's
@@ -73,18 +72,15 @@ configuration names it.
 
 | Route | Hostnames | Gateway | Backends |
 |---|---|---|---|
-| `aks-hello` | `hello-aks-dev-int-stateless-az2.int-fi.dev.onek8s.lol` | `int-fi-gateway/int-fi` | `aks-hello` |
-| `aks-hello-home` | `hello.int-fi.dev.onek8s.lol` | `int-fi-gateway/int-fi` | `aks-hello` |
+| `aks-hello` | `hello-aks-dev-int-stateful.int-fi.dev.onek8s.lol` | `int-fi-gateway/int-fi` | `aks-hello` |
+| `boot-log` | `hello-aks-dev-int-stateful.int-fi.dev.onek8s.lol` | `int-fi-gateway/int-fi` | `boot-log` |
 
 ## Workloads
 
 | Workload | Replicas | Images | URLs in its environment |
 |---|---|---|---|
-| Deployment `aks-hello` | 2 | `acronek8sdev.azurecr.io/aks-hello:0.5.0` | `WEATHER_URL`: `https://api.open-meteo.com` |
-
-## Notes
-
-- Other cells sync another path of the same repository: aks-dev-int-stateful: apps, aks-dev-int-stateless-az1: stateless.
+| Deployment `aks-hello` | 2 | `acronek8sdev.azurecr.io/aks-hello:0.6.0` | - |
+| Deployment `boot-log` | 1 | `docker.io/library/busybox:1.37.0` | - |
 
 ## Legend
 
