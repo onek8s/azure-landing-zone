@@ -12,10 +12,9 @@ aks-ai-agents' `aks-agent docs traffic` (aks-terraform workflow `Traffic flow do
 `stacks/platform-extensions/firewall-applications/`, the cell tfvars, the applications' Flux configuration and the fleet's
 allow-lists - never edit them by hand; regenerate them after a change to a rule file.
 
-**Policy `h2c-upstream` (2026-10-18, design D69/D70, audit):** every port of every Service in an application namespace
+**Policy `h2c-upstream` (2026-10-18, design D69/D70; deny since 2026-10-19, D82):** every port of every Service in an application namespace
 (the `kubernetes_excluded_namespaces` left out) declares `appProtocol: kubernetes.io/h2c`, so the zone gateway speaks
-HTTP/2 to the pod, never HTTP/1.1. Promote to `kubernetes_deny` once Cluster status shows 0 violations on a running
-cell with aks-fluxcd-example #37 synced (boot-log's busybox Service is the known finding in cells that run it).
+HTTP/2 to the pod, never HTTP/1.1. Stateless clusters only: boot-log's busybox Service (HTTP/1.1) runs in the stateful one.
 The one exception is named, not left to the namespace exclusions (2026-10-19, design D78): `exemptServices =
 ["flux-system/webhook-receiver"]` - notification-controller's Service behind the platform gateway's `/hook/` route, which
 GitHub's webhook deliveries reach over HTTP/1.1 (`<namespace>/<name>`; the definition's default is `[]`) - and since
@@ -24,8 +23,7 @@ GitHub's webhook deliveries reach over HTTP/1.1 (`<namespace>/<name>`; the defin
 **Policy `gateway-tls` (2026-10-18, design D70/D71; deny since 2026-10-19, D82):** in every `*-gateway` namespace the ConfigMap `traefik-dynamic`
 (aks-terraform `gateways/traefik`, Traefik's file-provider dynamic configuration) must state `tls.options.default` with
 `alpnProtocols` exactly `[h2]` and `minVersion: VersionTLS13` - HTTP/2 and TLS 1.3 only at the edge, read back so it cannot
-drift. `yaml.unmarshal` works in Gatekeeper's Rego (gator v3.21.1). Promoted alone (0 violations); `h2c-upstream` follows once
-it reports none.
+drift. `yaml.unmarshal` works in Gatekeeper's Rego (gator v3.21.1).
 
 **ALZ assignments (2026-10-19, the user):** only those for what the AKS platform runs on stay assigned; Defender for
 Cloud / Endpoint is not used (a third-party security tool, design D81) - its assignments are removed, Defender for
