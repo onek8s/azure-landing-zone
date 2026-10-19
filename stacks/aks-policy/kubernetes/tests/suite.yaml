@@ -600,6 +600,10 @@ tests:
     object: h2c-upstream/receiver-name-elsewhere-refused.yaml
     assertions:
     - violations: 1
+  - name: api-server-service-allowed
+    object: h2c-upstream/api-server-service-allowed.yaml
+    assertions:
+    - violations: 'no'
 - name: service-accounts
   template: ../templates/service-accounts.yaml
   constraint: service-accounts/constraint.yaml

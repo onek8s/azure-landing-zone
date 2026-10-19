@@ -18,7 +18,8 @@ HTTP/2 to the pod, never HTTP/1.1. Promote to `kubernetes_deny` once Cluster sta
 cell with aks-fluxcd-example #37 synced (boot-log's busybox Service is the known finding in cells that run it).
 The one exception is named, not left to the namespace exclusions (2026-10-19, design D78): `exemptServices =
 ["flux-system/webhook-receiver"]` - notification-controller's Service behind the platform gateway's `/hook/` route, which
-GitHub's webhook deliveries reach over HTTP/1.1 (`<namespace>/<name>`; the definition's default is `[]`).
+GitHub's webhook deliveries reach over HTTP/1.1 (`<namespace>/<name>`; the definition's default is `[]`) - and since
+2026-10-19 `default/kubernetes`, the API server's own Service.
 
 **Policy `gateway-tls` (2026-10-18, design D70/D71; deny since 2026-10-19, D82):** in every `*-gateway` namespace the ConfigMap `traefik-dynamic`
 (aks-terraform `gateways/traefik`, Traefik's file-provider dynamic configuration) must state `tls.options.default` with

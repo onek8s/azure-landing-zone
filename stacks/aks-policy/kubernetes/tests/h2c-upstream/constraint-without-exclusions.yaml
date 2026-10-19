@@ -15,3 +15,4 @@ spec:
     - kubernetes.io/h2c
     exemptServices:
     - flux-system/webhook-receiver
+    - default/kubernetes

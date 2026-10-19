@@ -181,13 +181,14 @@ locals {
     }
     h2c-upstream = {
       # HTTP/2 from the gateway to the pod (design D69, D70): audit until the lab shows both hops (V28, V29).
-      # Flux's webhook receiver is the one Service that stays HTTP/1.1 (GitHub's deliveries, D78): exempt
-      # by name, so it holds even if flux-system ever leaves the excluded namespaces.
+      # Flux's webhook receiver is the one Service that stays HTTP/1.1 (GitHub's deliveries, D78), and
+      # default/kubernetes is the API server's own (HTTPS, AKS-managed): both exempt by name, so they hold
+      # even if their namespace ever leaves the excluded ones.
       display     = "Stateless clusters: application Service ports declare appProtocol kubernetes.io/h2c - no HTTP/1.1 from the gateway"
       template    = "h2c-upstream"
       clusters    = "stateless"
       excluded    = local.kubernetes_excluded_namespaces
-      values      = { allowedAppProtocols = ["kubernetes.io/h2c"], exemptServices = ["flux-system/webhook-receiver"] }
+      values      = { allowedAppProtocols = ["kubernetes.io/h2c"], exemptServices = ["flux-system/webhook-receiver", "default/kubernetes"] }
       always_deny = false
     }
     rollout-guardrails = {
