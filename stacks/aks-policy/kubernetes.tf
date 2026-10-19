@@ -48,7 +48,7 @@ locals {
     portable-storage-only = { api_groups = [""], kinds = ["Pod", "PersistentVolumeClaim"], parameters = { storageClassName = "String" } }
     zone-placement        = { api_groups = [""], kinds = ["Pod", "Namespace"], parameters = { zones = "Array" } }
     placement-labels      = { api_groups = [""], kinds = ["Pod"], parameters = { allowedArchitectures = "Array", allowedCapacities = "Array", allowedAccelerators = "Array" }, defaults = { allowedAccelerators = [] } }
-    fqdn-egress           = { api_groups = ["", "cilium.io", "networking.k8s.io"], kinds = ["Pod", "CiliumNetworkPolicy", "NetworkPolicy"], parameters = { sharedSuffixes = "Array" } }
+    app-egress            = { api_groups = ["", "cilium.io", "networking.k8s.io"], kinds = ["Pod", "CiliumNetworkPolicy", "NetworkPolicy"], parameters = {} }
     gateway-only          = { api_groups = ["", "gateway.networking.k8s.io"], kinds = ["Service", "Gateway", "HTTPRoute"], parameters = { zones = "Array", domainSuffix = "String" } }
     secrets-via-eso       = { api_groups = [""], kinds = ["Secret"], parameters = { zones = "Array", exemptUsers = "Array" } }
     eso-objects           = { api_groups = ["external-secrets.io"], kinds = ["SecretStore", "ExternalSecret", "PushSecret"], parameters = { zones = "Array", keyVaultNamePrefix = "String", serviceAccount = "String" } }
@@ -112,19 +112,12 @@ locals {
       values      = { allowedArchitectures = ["amd64"], allowedCapacities = ["on-demand"], allowedAccelerators = [] }
       always_deny = false
     }
-    fqdn-egress = {
-      display  = "Egress only by FQDN: Cilium policies without CIDRs, entities or broad wildcards; pods use the cluster DNS"
-      template = "fqdn-egress"
-      clusters = "all"
-      excluded = local.kubernetes_excluded_namespaces
-      values = {
-        # Suffixes under which every customer has names (aks-fluxcd-platform scripts/check-egress.py)
-        sharedSuffixes = [
-          "core.windows.net", "blob.core.windows.net", "database.windows.net", "servicebus.windows.net",
-          "azurewebsites.net", "cloudapp.azure.com", "cloudapp.net", "azurecr.io", "azure.com", "windows.net",
-          "amazonaws.com", "googleapis.com", "github.io", "githubusercontent.com",
-        ]
-      }
+    app-egress = {
+      display     = "Application network policies only inside the cluster (endpoints and Services, layers 3 and 4); pods use the cluster DNS"
+      template    = "app-egress"
+      clusters    = "all"
+      excluded    = local.kubernetes_excluded_namespaces
+      values      = {}
       always_deny = false
     }
     gateway-only = {

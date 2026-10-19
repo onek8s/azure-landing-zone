@@ -6,9 +6,5 @@ metadata:
 spec:
   endpointSelector: {}
   egress:
-  - toFQDNs:
-    - matchPattern: '*.blob.core.windows.net'
-    toPorts:
-    - ports:
-      - port: '443'
-        protocol: TCP
+  - toNodes:
+    - {}

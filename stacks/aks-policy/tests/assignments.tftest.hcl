@@ -86,7 +86,7 @@ run "platform_kubernetes_policies" {
 
   assert {
     condition = alltrue([
-      for k in ["zone-placement", "placement-labels", "fqdn-egress", "gateway-only", "portable-storage-only"] :
+      for k in ["zone-placement", "placement-labels", "app-egress", "gateway-only", "portable-storage-only"] :
       contains(jsondecode(azurerm_subscription_policy_assignment.kubernetes[k].parameters).excludedNamespaces.value, "*-gateway")
     ])
     error_message = "The application rules leave out the platform's namespaces, the zones' gateways and secrets included."
@@ -101,7 +101,7 @@ run "new_definitions_stay_audit_when_enforced" {
   }
 
   assert {
-    condition     = alltrue([for k in ["zone-placement", "placement-labels", "fqdn-egress", "gateway-only"] : jsondecode(azurerm_subscription_policy_assignment.kubernetes[k].parameters).effect.value == "Audit"])
+    condition     = alltrue([for k in ["zone-placement", "placement-labels", "app-egress", "gateway-only"] : jsondecode(azurerm_subscription_policy_assignment.kubernetes[k].parameters).effect.value == "Audit"])
     error_message = "The platform's new validations keep effect Audit until promoted."
   }
 

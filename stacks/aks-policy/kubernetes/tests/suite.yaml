@@ -228,92 +228,72 @@ tests:
     object: placement-labels/unknown-accelerator-refused.yaml
     assertions:
     - violations: 1
-- name: fqdn-egress
-  template: ../templates/fqdn-egress.yaml
-  constraint: fqdn-egress/constraint.yaml
+- name: app-egress
+  template: ../templates/app-egress.yaml
+  constraint: app-egress/constraint.yaml
   cases:
-  - name: fqdn-policy-allowed
-    object: fqdn-egress/fqdn-policy-allowed.yaml
+  - name: in-cluster-allowed
+    object: app-egress/in-cluster-allowed.yaml
     assertions:
     - violations: 'no'
   - name: specs-list-allowed
-    object: fqdn-egress/specs-list-allowed.yaml
-    assertions:
-    - violations: 'no'
-  - name: pattern-allowed
-    object: fqdn-egress/pattern-allowed.yaml
+    object: app-egress/specs-list-allowed.yaml
     assertions:
     - violations: 'no'
   - name: to-cidr-refused
-    object: fqdn-egress/to-cidr-refused.yaml
+    object: app-egress/to-cidr-refused.yaml
     assertions:
     - violations: 1
   - name: to-cidr-set-refused
-    object: fqdn-egress/to-cidr-set-refused.yaml
+    object: app-egress/to-cidr-set-refused.yaml
     assertions:
     - violations: 1
   - name: to-entities-refused
-    object: fqdn-egress/to-entities-refused.yaml
+    object: app-egress/to-entities-refused.yaml
+    assertions:
+    - violations: 1
+  - name: to-fqdns-refused
+    object: app-egress/to-fqdns-refused.yaml
+    assertions:
+    - violations: 1
+  - name: specs-list-to-fqdns-refused
+    object: app-egress/specs-list-to-fqdns-refused.yaml
+    assertions:
+    - violations: 1
+  - name: to-nodes-refused
+    object: app-egress/to-nodes-refused.yaml
+    assertions:
+    - violations: 1
+  - name: ports-only-refused
+    object: app-egress/ports-only-refused.yaml
+    assertions:
+    - violations: 1
+  - name: dns-rules-refused
+    object: app-egress/dns-rules-refused.yaml
     assertions:
     - violations: 1
   - name: to-services-selector-less-refused
-    object: fqdn-egress/to-services-selector-less-refused.yaml
-    assertions:
-    - violations: 1
-  - name: fqdn-without-ports-refused
-    object: fqdn-egress/fqdn-without-ports-refused.yaml
-    assertions:
-    - violations: 1
-  - name: bare-wildcard-refused
-    object: fqdn-egress/bare-wildcard-refused.yaml
-    assertions:
-    - violations: 1
-  - name: short-wildcard-refused
-    object: fqdn-egress/short-wildcard-refused.yaml
-    assertions:
-    - violations: 1
-  - name: inner-wildcard-refused
-    object: fqdn-egress/inner-wildcard-refused.yaml
-    assertions:
-    - violations: 1
-  - name: cloud-wide-wildcard-refused
-    object: fqdn-egress/cloud-wide-wildcard-refused.yaml
-    assertions:
-    - violations: 1
-  - name: key-vault-refused
-    object: fqdn-egress/key-vault-refused.yaml
-    assertions:
-    - violations: 1
-  - name: dns-anything-refused
-    object: fqdn-egress/dns-anything-refused.yaml
-    assertions:
-    - violations: 1
-  - name: dns-undeclared-name-refused
-    object: fqdn-egress/dns-undeclared-name-refused.yaml
-    assertions:
-    - violations: 1
-  - name: dns-key-vault-refused
-    object: fqdn-egress/dns-key-vault-refused.yaml
+    object: app-egress/to-services-selector-less-refused.yaml
     assertions:
     - violations: 1
   - name: network-policy-ip-block-refused
-    object: fqdn-egress/network-policy-ip-block-refused.yaml
+    object: app-egress/network-policy-ip-block-refused.yaml
     assertions:
     - violations: 1
   - name: network-policy-pods-allowed
-    object: fqdn-egress/network-policy-pods-allowed.yaml
+    object: app-egress/network-policy-pods-allowed.yaml
     assertions:
     - violations: 'no'
   - name: pod-cluster-dns-allowed
-    object: fqdn-egress/pod-cluster-dns-allowed.yaml
+    object: app-egress/pod-cluster-dns-allowed.yaml
     assertions:
     - violations: 'no'
   - name: pod-dns-default-refused
-    object: fqdn-egress/pod-dns-default-refused.yaml
+    object: app-egress/pod-dns-default-refused.yaml
     assertions:
     - violations: 1
   - name: pod-own-nameserver-refused
-    object: fqdn-egress/pod-own-nameserver-refused.yaml
+    object: app-egress/pod-own-nameserver-refused.yaml
     assertions:
     - violations: 2
 - name: gateway-only
