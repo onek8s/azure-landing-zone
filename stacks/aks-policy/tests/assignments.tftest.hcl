@@ -291,3 +291,12 @@ run "dev_promotions_plan" {
     error_message = "dev's promoted rules deny (environments/dev/policy.tfvars)."
   }
 }
+
+run "deployment_safeguards_report_no_mutations" {
+  command = plan
+
+  assert {
+    condition     = jsondecode(azurerm_subscription_policy_assignment.aks["k8s-deployment-safeguards"].parameters).effectForWarnOnlyPolicies.value == "Disabled"
+    error_message = "Deployment safeguards: the mutation annotation report is off (the platform's mutations change every application pod)."
+  }
+}
