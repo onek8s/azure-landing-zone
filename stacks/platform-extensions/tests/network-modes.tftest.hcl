@@ -115,6 +115,11 @@ run "firewall_mode" {
     condition     = length(azurerm_private_endpoint.runners_acr) == 0 && azurerm_container_registry.runners[0].public_network_access_enabled
     error_message = "lab: Basic runner registry without a private endpoint."
   }
+
+  assert {
+    condition     = keys(azurerm_resource_group_policy_exemption.build_tenant) == ["bootstrap-state-cmk", "bootstrap-state-storage", "hub-network-udr", "management-network-udr"]
+    error_message = "firewall mode: guardrail exemptions for the bootstrap state and the management and hub networks only."
+  }
 }
 
 run "sandbox_mode" {
@@ -324,6 +329,14 @@ run "labfw_mode" {
   assert {
     condition     = length(module.labfw) == 1 && module.labfw[0].private_ip == "10.0.1.4"
     error_message = "labfw mode deploys labfw at 10.0.1.4 in snet-labfw."
+  }
+
+  assert {
+    condition = alltrue([
+      for a in ["Enforce-GR-Network0", "Enforce-Encrypt-CMK0", "Enforce-GR-Compute0"] :
+      endswith(azurerm_resource_group_policy_exemption.build_tenant["labfw-${lower(a)}"].policy_assignment_id, "/managementGroups/platform/providers/Microsoft.Authorization/policyAssignments/${a}")
+    ]) && length(azurerm_resource_group_policy_exemption.build_tenant) == 7
+    error_message = "labfw mode: labfw's resource group is exempt from the network, CMK and compute guardrails."
   }
 
   assert {

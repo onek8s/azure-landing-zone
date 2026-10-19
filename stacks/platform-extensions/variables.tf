@@ -325,3 +325,9 @@ there is one for the whole tenant, in access mode Open (resources outside the sc
 endpoints). The workspaces and data collection endpoints in it can then turn public network access off.
 DESCRIPTION
 }
+
+variable "bootstrap_state_resource_group_name" {
+  type        = string
+  default     = "rg-alz-build-state-swedencentral-001"
+  description = "Resource group of the ALZ accelerator bootstrap's Terraform state account in sub-mgmt (accelerator/config/inputs.yaml: service alz, environment build, swedencentral, 001), exempt from the platform guardrails (main.policy.exemptions.tf)."
+}

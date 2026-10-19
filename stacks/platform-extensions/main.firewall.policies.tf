@@ -296,16 +296,6 @@ resource "azurerm_firewall_policy_rule_collection_group" "parent_platform" {
       }
     }
 
-    rule {
-      name              = "defender-for-containers"
-      source_ip_groups  = local.firewall_all_cells
-      destination_fqdns = ["*.cloud.defender.microsoft.com"]
-      protocols {
-        type = "Https"
-        port = 443
-      }
-    }
-
     # The GitOps extension (Flux) and external-dns on the system pools. github.com only while the fleet is
     # pulled from Git; with the OCI artifact in the environment ACR it goes.
     rule {

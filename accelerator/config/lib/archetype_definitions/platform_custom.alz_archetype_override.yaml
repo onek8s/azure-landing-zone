@@ -2,18 +2,48 @@ base_archetype: platform
 name: platform_custom
 policy_assignments_to_add: []
 policy_assignments_to_remove: [
-# No monitoring in the lab for now (observability comes later): no Log Analytics workspace, no Azure Monitor Agent
-# identity and no data collection rules (management_resources_enabled = false in platform-landing-zone.tfvars), so
-# the ALZ assignments that send data to them or point at them are not assigned. Assign them again together with
-# the management resources.
-  DenyAction-DeleteUAMIAMA,
+# Only the ALZ assignments that govern what the AKS platform runs on are assigned (2026-10-19): AKS, its nodes'
+# compute and disks, the networks (VNets, subnets, NSGs, route tables, NICs, public IPs, private endpoints and DNS),
+# Key Vault, the container registry, storage and encryption. Assignments for services the platform does not use,
+# for virtual machine operations it does not run (backup, update management, guest configuration) and for generic
+# governance are removed. Microsoft Defender is not used (a third-party security tool instead, OneK8s design
+# decision D81): every Defender for Cloud and Defender for Endpoint assignment is removed too.
+# Microsoft Defender for SQL (design D81):
   Deploy-MDFC-DefSQL-AMA,
+# No Log Analytics workspace, Azure Monitor Agent identity or data collection rules in the build tenant
+# (management_resources_enabled = false); the platform observes itself with Grafana Cloud (design 6.2):
+  DenyAction-DeleteUAMIAMA,
   Deploy-VM-ChangeTrack,
   Deploy-VM-Monitoring,
   Deploy-vmArc-ChangeTrack,
   Deploy-vmHybr-Monitoring,
   Deploy-VMSS-ChangeTrack,
   Deploy-VMSS-Monitoring,
+# Virtual machine operations the platform does not run (AKS manages its nodes; no Recovery Services vaults):
+  Deploy-GuestAttest,
+  Enable-AUM-CheckUpdates,
+  Enforce-ASR,
+# Guardrails for services the platform does not use:
+  Enforce-GR-APIM0,
+  Enforce-GR-AppServices0,
+  Enforce-GR-Automation0,
+  Enforce-GR-BotService0,
+  Enforce-GR-CogServ0,
+  Enforce-GR-ContApps0,
+  Enforce-GR-ContInst0,
+  Enforce-GR-CosmosDb0,
+  Enforce-GR-DataExpl0,
+  Enforce-GR-DataFactory0,
+  Enforce-GR-EventGrid0,
+  Enforce-GR-EventHub0,
+  Enforce-GR-MachLearn0,
+  Enforce-GR-MySQL0,
+  Enforce-GR-OpenAI0,
+  Enforce-GR-PostgreSQL0,
+  Enforce-GR-ServiceBus0,
+  Enforce-GR-SQL0,
+  Enforce-GR-Synapse0,
+  Enforce-GR-VirtualDesk0,
 ]
 policy_definitions_to_add: []
 policy_definitions_to_remove: []

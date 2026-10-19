@@ -34,23 +34,12 @@ MANAGEMENT_GROUPS = {
     "decommissioned": "decommissioned",
 }
 
-# Parameters that must survive next to the enforcement mode (taken from the accelerator example).
-EXTRA = {
-    ("alz", "Deploy-MDFC-Config-H224"): """          parameters = {
-            enableAscForServers                         = "DeployIfNotExists"
-            enableAscForServersVulnerabilityAssessments = "DeployIfNotExists"
-            enableAscForSql                             = "DeployIfNotExists"
-            enableAscForAppServices                     = "DeployIfNotExists"
-            enableAscForStorage                         = "DeployIfNotExists"
-            enableAscForContainers                      = "DeployIfNotExists"
-            enableAscForKeyVault                        = "DeployIfNotExists"
-            enableAscForSqlOnVm                         = "DeployIfNotExists"
-            enableAscForArm                             = "DeployIfNotExists"
-            enableAscForOssDb                           = "DeployIfNotExists"
-            enableAscForCosmosDbs                       = "DeployIfNotExists"
-            enableAscForCspm                            = "DeployIfNotExists"
-          }
-""",
+# Parameters set next to the enforcement mode, wherever the assignment is assigned.
+PARAMETERS = {
+    # Defender for Storage: Microsoft Defender is not used (OneK8s design decision D81)
+    "Enforce-GR-Storage0": {"storageThreatProtection": "Disabled"},
+    # No DDoS protection plan in the build tenant (ddos_protection_plan_enabled = false)
+    "Enforce-GR-Network0": {"vnetModifyDdos": "Disabled"},
 }
 
 
@@ -70,11 +59,13 @@ def main() -> None:
         out.append("      policy_assignments = {")
         width = max(len(n) for n in names)
         for name in names:
-            extra = EXTRA.get((mg, name))
-            if extra:
+            parameters = PARAMETERS.get(name)
+            if parameters:
                 out.append(f"        {name} = {{")
                 out.append(f'          enforcement_mode = "$${{policy_enforcement_mode}}"')
-                out.append(extra.rstrip("\n"))
+                out.append("          parameters = {")
+                out.extend(f'            {k} = "{v}"' for k, v in parameters.items())
+                out.append("          }")
                 out.append("        }")
             else:
                 out.append(f'        {name.ljust(width)} = {{ enforcement_mode = "$${{policy_enforcement_mode}}" }}')
