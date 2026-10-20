@@ -1,6 +1,11 @@
 zone: int-se
 contact: https://github.com/onek8s/aks-fluxcd-example/issues
 egress:
+  - fqdn: api.ipify.org
+    port: 443
+    protocol: https
+    reason: "aks-hello needs to query api.ipify.org for its public IP, as a new egress destination not yet in the configuration firewall-egress/kustomization.yaml line 6"
+    evidence: "3 denied connections from pods aks-hello in namespace int-se-example on cluster aks-dev-int-stateless-az3, first seen 2026-10-20T12:04:20Z, last seen 2026-10-20T12:04:34Z"
   - fqdn: api.open-meteo.com
     port: 443
     protocol: https
