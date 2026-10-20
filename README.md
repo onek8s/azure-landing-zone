@@ -10,7 +10,7 @@ Verified Modules). The clusters and the container registry are
 [design section 1.3](https://github.com/onek8s/onek8s.github.io/blob/main/design/1.3-open-standards-and-portability.md).
 
 It implements **phase 1 (Foundation)** of the
-[implementation project](https://github.com/onek8s/onek8s.github.io/blob/main/design/7.1-implementation-project-and-acceptance-testing.md):
+[implementation project](https://github.com/onek8s/onek8s.github.io/blob/main/archive/7.1-implementation-project-and-acceptance-testing.md):
 a separate build tenant with management, hub and `sub-aks-dev`, pipelines with OIDC, all Azure Policy assignments in
 audit mode and a client VNet that simulates the corporate network, in **germanywestcentral** (since 2026-10-15; the
 accelerator bootstrap stays in swedencentral). `sub-aks-dev` plays the design's internal dev subscription

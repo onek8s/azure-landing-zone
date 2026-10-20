@@ -88,7 +88,7 @@ reported as *audit only*.
 ## Not built yet
 
 The backlog of the whole platform, in priority order, is in design section 7.1
-([Backlog, in priority order](https://github.com/onek8s/onek8s.github.io/blob/main/design/7.1-implementation-project-and-acceptance-testing.md)).
+([Backlog, in priority order](https://github.com/onek8s/onek8s.github.io/blob/main/archive/7.1-implementation-project-and-acceptance-testing.md)).
 This repository's items: #1 promote the remaining Azure Policy rules to deny, #2 the external hub and Firewall in
 `firewall` mode with `main.firewall.tf` rewritten (parent policy + child per exposure, no edge / NGINXaaS rules),
 #4 the management VNet path to a private API server, #7 the internal hub and `sub-aks-dev-int`.
