@@ -28,9 +28,9 @@ drift. `yaml.unmarshal` works in Gatekeeper's Rego (gator v3.21.1).
 **Deployment safeguards' mutation report (2026-10-19, #99):** the built-in initiative's one warn-only member,
 `printMutationsAnnotations`, reports every pod carrying Gatekeeper's `gatekeeper.sh/mutations` annotation as
 non-compliant ("resource was mutated by platform mutation") - every application pod, since the platform's zone,
-architecture and spot mutations change them on purpose (design 2.3, R17). The assignment sets
+architecture and spot mutations change them on purpose (design 2.3, R8). The assignment sets
 `effectForWarnOnlyPolicies = Disabled`; the mutations stay (placement cannot be injected without a mutation or a
-second admission engine, R14) and the validations check what they wrote. Its stale results left Azure Policy's
+second admission engine, R15) and the validations check what they wrote. Its stale results left Azure Policy's
 compliance data by 2026-10-20 (`az policy state list` with Lab admin: none for `aks-dev-k8s-deployment-safeguards`).
 
 **ALZ assignments (2026-10-19, the user):** only those for what the AKS platform runs on stay assigned; Defender for

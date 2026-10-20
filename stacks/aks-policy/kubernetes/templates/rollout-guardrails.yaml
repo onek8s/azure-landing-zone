@@ -1,4 +1,4 @@
-# Replica and rollout guardrails (R11, R12, design section 3.4): an application survives the loss of
+# Replica and rollout guardrails (R23, R26, design section 3.4): an application survives the loss of
 # a node, a rollout and a node drain without an outage.
 #
 #   - Deployment and StatefulSet `replicas`, and HorizontalPodAutoscaler `minReplicas`, at least

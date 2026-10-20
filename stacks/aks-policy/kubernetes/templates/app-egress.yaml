@@ -1,4 +1,4 @@
-# Application policies stay inside the cluster (R20, design sections 2.7 and 5.1): the hub Firewall is
+# Application policies stay inside the cluster (R29, design sections 2.7 and 5.1): the hub Firewall is
 # the one decision out of it, from the per-application rule files, and the fleet's `<zone>-firewall-egress`
 # lets a zone's application namespaces out to the world. Cilium works at layers 3 and 4 only (no ACNS,
 # design D80), so an application's own policy may only narrow traffic inside the cluster:

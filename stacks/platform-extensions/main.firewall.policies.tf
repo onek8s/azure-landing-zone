@@ -399,7 +399,7 @@ resource "azurerm_firewall_policy_rule_collection_group" "exposure_environment" 
     # checks, and the zone's gateway to the zone's applications on whatever port each application serves, so TCP
     # as a whole; ICMP for Cilium's health. From a zone to the system pool only cluster DNS (CoreDNS, 53) and the
     # API server's private endpoint (443): nothing else of the platform is a zone's to reach. Nothing between two
-    # zones (design R5): an application reaches another zone's application through its published name alone - an
+    # zones (design R4): an application reaches another zone's application through its published name alone - an
     # application rule of its own rule file, proxied by the firewall.
     rule {
       name                  = "system-pool-to-zones"
