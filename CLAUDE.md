@@ -42,3 +42,15 @@ platform guardrails in `stacks/platform-extensions/main.policy.exemptions.tf`. K
 in prd only. The user's rule: **every policy goes to Deny (enforcement `Default`) once it shows 0 non-compliant
 resources** (D82): ALZ assignments in `accelerator/config/policy-deny.yaml` (then `scripts/update-policy-enforcement.sh`,
 `scripts/sync-platform.sh`), AKS rules in `kubernetes_deny`. An assignment that evaluates nothing waits until it has.
+
+**Firewall log summaries (2026-10-20, design D84):** `modules/firewall-log-summaries`, wired in
+`stacks/platform-extensions/main.labfw.logs.tf` (`labfw.log_analytics.summaries`, on by default): three summary rules on
+labfw's workspace `log-labfw-germanywestcentral` - `firewall-denied-flows` -> `FirewallDeniedFlows_CL` and
+`firewall-rule-hits` -> `FirewallRuleHits_CL` (60 min bins, 90 days), `firewall-zone-traffic` ->
+`FirewallZoneTraffic_CL` (1440 min, 395 days); the tables are Terraform's (created ahead, `ignore_changes = [column]`
+for the rules' own `_Rule*`/`_Bin*` columns), the run log goes to `LASummaryLogs` (diagnostic setting `SummaryLogs`).
+Every `SourceIp` is attributed to `Environment`/`Zone` from `firewall_exposures` (zones, then `system`, `shared`) and
+the build tenant's `management`, `client`, `vpn`, `hub` (else `other`) - a new zone is attributed from its first flow.
+The egress agent still reads the raw `LabfwFirewallLog_CL`. A bin is aggregated after it closes plus about 3.5 min to
+10 % of the bin: the hourly tables show a denial 1-2 h later, the daily one the next day. API version
+`summaryLogs@2025-07-01` (the newest in azapi 2.13's schema).

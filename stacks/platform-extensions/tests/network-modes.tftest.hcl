@@ -120,6 +120,11 @@ run "firewall_mode" {
     condition     = keys(azurerm_resource_group_policy_exemption.build_tenant) == ["bootstrap-state-cmk", "bootstrap-state-storage", "hub-network-udr", "management-network-udr"]
     error_message = "firewall mode: guardrail exemptions for the bootstrap state and the management and hub networks only."
   }
+
+  assert {
+    condition     = length(module.labfw_log_summaries) == 0
+    error_message = "firewall mode: no labfw, so no summary rules on its workspace."
+  }
 }
 
 run "sandbox_mode" {
@@ -152,6 +157,11 @@ run "sandbox_mode" {
   assert {
     condition     = length(azurerm_container_group.runners["01"].dns_config) == 0 && length(azurerm_virtual_network.management.dns_servers) == 0 && length(azurerm_private_dns_zone_virtual_network_link.hub_zones) == 2
     error_message = "sandbox mode resolves through Azure DNS with the management and client VNets linked to every hub private link zone, not to the other hub zones."
+  }
+
+  assert {
+    condition     = length(module.labfw_log_summaries) == 0
+    error_message = "sandbox mode: no labfw, so no summary rules on its workspace."
   }
 }
 
@@ -422,6 +432,36 @@ run "labfw_mode" {
     condition     = anytrue([for c in azurerm_firewall_policy_rule_collection_group.parent_platform[0].application_rule_collection : anytrue([for r in c.rule : r.name == "platform-sources"])])
     error_message = "the cells reach the platform's chart and image sources."
   }
+
+  assert {
+    condition = (
+      length(module.labfw_log_summaries) == 1 &&
+      module.labfw_log_summaries[0].tables == { "firewall-denied-flows" = "FirewallDeniedFlows_CL", "firewall-rule-hits" = "FirewallRuleHits_CL", "firewall-zone-traffic" = "FirewallZoneTraffic_CL" } &&
+      output.labfw.log_summaries == module.labfw_log_summaries[0].tables
+    )
+    error_message = "labfw's workspace gets the three summary rules of design D84."
+  }
+
+  assert {
+    condition = alltrue([
+      for s in ["\"dev|int-fi\"", "\"dev|int-se\"", "\"100.64.16.0/20\"", "\"100.64.32.0/20\"", "\"dev|system\"", "\"dev|shared\"", "\"build-tenant|vpn\"", "\"10.0.12.0/24\"", "| where Action == \"Deny\""] :
+      strcontains(module.labfw_log_summaries[0].queries["firewall-denied-flows"], s)
+      ]) && startswith(module.labfw_log_summaries[0].queries["firewall-denied-flows"], "LabfwFirewallLog_CL\n") && can(regex(
+      "(?s)dev\\|int-fi.*dev\\|int-se.*dev\\|system.*dev\\|shared.*build-tenant\\|management.*build-tenant\\|client.*build-tenant\\|vpn.*build-tenant\\|hub.*\"other\"\\)",
+      module.labfw_log_summaries[0].queries["firewall-denied-flows"]
+    ))
+    error_message = "The denied flows of labfw's log are attributed to the lab's zones (node and pod slots), the cell's system and shared networks and the build tenant's networks, in that order, the rest to other."
+  }
+
+  assert {
+    condition     = alltrue([for q in values(module.labfw_log_summaries[0].queries) : !strcontains(q, "ago(") && !strcontains(q, "union *") && !strcontains(lower(q), "isfuzzy") && strcontains(q, "Destination = iff(isnotempty(Fqdn), Fqdn, DestinationIp)")])
+    error_message = "Summary rule queries carry no time filter (the bin is the range), no union * and no isfuzzy."
+  }
+
+  assert {
+    condition     = module.labfw_log_summaries[0].bin_sizes == { "firewall-denied-flows" = 60, "firewall-rule-hits" = 60, "firewall-zone-traffic" = 1440 }
+    error_message = "Hourly denied flows and rule hits, daily zone traffic."
+  }
 }
 
 run "labfw_mode_vpn_and_dns_proxy" {
@@ -492,6 +532,11 @@ run "labfw_mode_vpn_and_dns_proxy" {
   assert {
     condition     = length(azurerm_private_dns_zone_virtual_network_link.hub_zones) == 0
     error_message = "with labfw.spoke_dns_proxy no spoke links to the hub zones."
+  }
+
+  assert {
+    condition     = length(module.labfw_log_summaries) == 0
+    error_message = "without labfw's Log Analytics workspace no summary rules."
   }
 }
 

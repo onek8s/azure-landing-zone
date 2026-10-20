@@ -83,6 +83,7 @@ labfw = {
   # egress agent (design D61, onek8s/aks-ai-agents) reads them with Reader on sub-hub - no one logs in to the VM
   # No public network access (design D60): the agent ingests and readers query through the hub's Azure Monitor
   # Private Link scope (monitor_private_link) - from outside Azure over the labfw VPN
+  # Its summary rules (design D84, defaults on): FirewallDeniedFlows_CL, FirewallRuleHits_CL (hourly), FirewallZoneTraffic_CL (daily)
   log_analytics   = { enabled = true, public_network_access = false }
   spoke_dns_proxy = true
   # WireGuard for machines outside Azure (the pool counts as management: API server private endpoints, jump host,

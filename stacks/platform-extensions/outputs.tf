@@ -37,6 +37,8 @@ output "labfw" {
     vpn_pool            = module.labfw[0].vpn_pool
     resource_group_name = module.labfw[0].resource_group_name
     log_analytics       = module.labfw[0].log_analytics_workspace
+    # Summary rule => its table (design D84); null without them
+    log_summaries = local.labfw_log_summaries ? module.labfw_log_summaries[0].tables : null
   } : null
 }
 
