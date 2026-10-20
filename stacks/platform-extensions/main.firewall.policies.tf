@@ -391,6 +391,58 @@ resource "azurerm_firewall_policy_rule_collection_group" "exposure_environment" 
         destination_ports     = ["443"]
       }
     }
+
+    # The Kubernetes flows between a cell's system pool and its zones (OneK8s design section 2.4, flows 1 to 4; D73):
+    # every subnet of a cell routes the cell's own address spaces to the firewall, so these meet it too. From the
+    # platform's side - the system pool's nodes and pods - to a zone's nodes and pods: the kubelet (the API server's
+    # tunnel, metrics-server, the collectors' node and container metrics), the node exporter, Cilium's health
+    # checks, and the zone's gateway to the zone's applications on whatever port each application serves, so TCP
+    # as a whole; ICMP for Cilium's health. From a zone to the system pool only cluster DNS (CoreDNS, 53) and the
+    # API server's private endpoint (443): nothing else of the platform is a zone's to reach. Nothing between two
+    # zones (design R5): an application reaches another zone's application through its published name alone - an
+    # application rule of its own rule file, proxied by the firewall.
+    rule {
+      name                  = "system-pool-to-zones"
+      protocols             = ["TCP"]
+      source_ip_groups      = [azurerm_ip_group.policy_system[each.key].id]
+      destination_ip_groups = [for zone in keys(each.value.zones) : azurerm_ip_group.policy_zone["${each.value.env}-${zone}"].id]
+      destination_ports     = ["*"]
+    }
+    rule {
+      name                  = "system-pool-ping-zones"
+      protocols             = ["ICMP"]
+      source_ip_groups      = [azurerm_ip_group.policy_system[each.key].id]
+      destination_ip_groups = [for zone in keys(each.value.zones) : azurerm_ip_group.policy_zone["${each.value.env}-${zone}"].id]
+      destination_ports     = ["*"]
+    }
+    rule {
+      name                  = "zones-to-cluster-dns"
+      protocols             = ["TCP", "UDP"]
+      source_ip_groups      = [for zone in keys(each.value.zones) : azurerm_ip_group.policy_zone["${each.value.env}-${zone}"].id]
+      destination_ip_groups = [azurerm_ip_group.policy_system[each.key].id]
+      destination_ports     = ["53"]
+    }
+    rule {
+      name                  = "zones-to-api-server"
+      protocols             = ["TCP"]
+      source_ip_groups      = [for zone in keys(each.value.zones) : azurerm_ip_group.policy_zone["${each.value.env}-${zone}"].id]
+      destination_ip_groups = [azurerm_ip_group.policy_system[each.key].id]
+      destination_ports     = ["443"]
+    }
+    rule {
+      name                  = "zones-to-cilium-health"
+      protocols             = ["TCP"]
+      source_ip_groups      = [for zone in keys(each.value.zones) : azurerm_ip_group.policy_zone["${each.value.env}-${zone}"].id]
+      destination_ip_groups = [azurerm_ip_group.policy_system[each.key].id]
+      destination_ports     = ["4240"]
+    }
+    rule {
+      name                  = "zones-ping-system-pool"
+      protocols             = ["ICMP"]
+      source_ip_groups      = [for zone in keys(each.value.zones) : azurerm_ip_group.policy_zone["${each.value.env}-${zone}"].id]
+      destination_ip_groups = [azurerm_ip_group.policy_system[each.key].id]
+      destination_ports     = ["*"]
+    }
   }
 
   application_rule_collection {

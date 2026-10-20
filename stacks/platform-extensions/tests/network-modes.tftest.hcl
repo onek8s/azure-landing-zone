@@ -398,6 +398,20 @@ run "labfw_mode" {
     condition     = keys(azurerm_firewall_policy.exposure) == ["int"] && length([for c in azurerm_firewall_policy_rule_collection_group.exposure_environment["dev-int"].network_rule_collection : c if anytrue([for r in c.rule : r.name == "corporate-to-zones"])]) == 1
     error_message = "the internal exposure's child policy lets the corporate network reach its zones' gateways."
   }
+  assert {
+    condition = (
+      toset([for r in one([for c in azurerm_firewall_policy_rule_collection_group.exposure_environment["dev-int"].network_rule_collection : c if c.name == "dev-int-network"]).rule : "${r.name} ${join(",", r.protocols)} ${join(",", r.destination_ports)}" if startswith(r.name, "system-pool") || startswith(r.name, "zones-")]) == toset([
+        "system-pool-to-zones TCP *",
+        "system-pool-ping-zones ICMP *",
+        "zones-to-cluster-dns TCP,UDP 53",
+        "zones-to-api-server TCP 443",
+        "zones-to-cilium-health TCP 4240",
+        "zones-ping-system-pool ICMP *",
+      ]) &&
+      [for r in one([for c in azurerm_firewall_policy_rule_collection_group.exposure_environment["dev-int"].network_rule_collection : c if c.name == "dev-int-network"]).rule : length(r.source_ip_groups) if r.name == "zones-to-cluster-dns"][0] == 2
+    )
+    error_message = "The Kubernetes flows between the system pool and the zones are network rules of the environment (design D73): the platform's side reaches the zones on TCP and ICMP, a zone reaches the system pool on 53, 443 and Cilium's health alone."
+  }
 
   assert {
     condition     = anytrue([for c in azurerm_firewall_policy_rule_collection_group.parent_platform[0].network_rule_collection : anytrue([for r in c.rule : r.name == "aks-api-servers" && r.destination_addresses == tolist(["AzureCloud.germanywc"])])])
