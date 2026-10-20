@@ -8,6 +8,8 @@ application rules of its environment's rule collection group in the exposure's c
 is any name the application calls as a client: an API on the internet, a PaaS endpoint, or another zone's published
 name (`<app>.<zone>.<env>.onek8s.lol`, the entry point of that zone's gateway) - zones are never connected directly,
 and the firewall proxies an application rule from its own address, so the other zone's gateway answers through the hub.
+The environment's published names (`published_domain`, `*.dev.onek8s.lol`) that no file names are refused by the
+last collection, `<env>-<exposure>-published-names-deny` (priority 500): the firewall resets such a connection at once.
 
 ```yaml
 zone: int-se                      # the zone the namespace is in; the namespace must be <zone>-<app>

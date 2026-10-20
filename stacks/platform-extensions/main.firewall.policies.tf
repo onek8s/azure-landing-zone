@@ -540,6 +540,32 @@ resource "azurerm_firewall_policy_rule_collection_group" "exposure_environment" 
     }
   }
 
+  # Last (design D73): a zone's application reaches a published name - another zone's or its own zone's gateway - only
+  # through an application rule of its own file above. Everything else under the environment's domain is refused here,
+  # explicitly and by name: the firewall resets the connection at once (curl 35) and logs this rule, where the default
+  # deny's answer is the same but anonymous.
+  dynamic "application_rule_collection" {
+    for_each = each.value.published_domain == null || length(each.value.zones) == 0 ? [] : [each.value.published_domain]
+    content {
+      name     = "${each.key}-published-names-deny"
+      priority = 500
+      action   = "Deny"
+      rule {
+        name              = "zones-to-published-names"
+        source_ip_groups  = [for zone in keys(each.value.zones) : azurerm_ip_group.policy_zone["${each.value.env}-${zone}"].id]
+        destination_fqdns = ["*.${application_rule_collection.value}"]
+        protocols {
+          type = "Https"
+          port = 443
+        }
+        protocols {
+          type = "Http"
+          port = 80
+        }
+      }
+    }
+  }
+
   lifecycle {
     precondition {
       condition = alltrue([
