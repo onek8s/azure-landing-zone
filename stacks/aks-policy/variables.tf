@@ -69,7 +69,7 @@ variable "stateless_cluster_names" {
 
 variable "stateful_cluster_name" {
   type        = string
-  description = "The environment's stateful cluster (at most one, R9), left out of the stateless rules - whether it exists yet or not."
+  description = "The environment's stateful cluster (at most one, R19), left out of the stateless rules - whether it exists yet or not."
 }
 
 variable "key_vault_name_prefix" {

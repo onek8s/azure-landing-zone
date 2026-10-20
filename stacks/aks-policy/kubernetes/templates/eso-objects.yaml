@@ -1,4 +1,4 @@
-# External Secrets Operator objects of an isolation zone's namespaces (R7, R7b, design sections 2.5
+# External Secrets Operator objects of an isolation zone's namespaces (R10, R11, design sections 2.5
 # and 14): each namespace reads its own share of a vault through its own identity, and nothing else.
 #
 #   SecretStore     provider `azurekv` only, `authType: WorkloadIdentity` with the namespace's

@@ -1,4 +1,4 @@
-# GPU chosen by the application (R17, design section 2.3): a pod labelled platform/accelerator:
+# GPU chosen by the application (R8, design section 2.3): a pod labelled platform/accelerator:
 # nvidia-gpu tolerates the zone's GPU pool's taint, platform/accelerator=nvidia-gpu:NoSchedule.
 # The pod still asks for the GPUs themselves as a resource (nvidia.com/gpu); that request is what
 # makes the cluster autoscaler add a GPU node, and the validation refuses the label without it.

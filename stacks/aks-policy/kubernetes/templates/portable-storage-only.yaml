@@ -5,7 +5,7 @@
 # restricted Pod Security Standard already refuses the in-tree azureDisk and azureFile volumes.
 #
 # Only creation is checked (and the audit of what exists). Platform namespaces are left out by the
-# assignment. Replaces the fleet's ValidatingAdmissionPolicy `portable-storage-only` (R14).
+# assignment. Replaces the fleet's ValidatingAdmissionPolicy `portable-storage-only` (R15).
 apiVersion: templates.gatekeeper.sh/v1
 kind: ConstraintTemplate
 metadata:

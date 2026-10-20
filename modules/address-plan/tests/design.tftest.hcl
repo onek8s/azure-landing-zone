@@ -62,6 +62,6 @@ run "new_country_does_not_move_existing_zones" {
 
   assert {
     condition     = output.zones["int-fi"].prefix == "10.17.0.0/17" && output.zones["int-no"].prefix == "10.19.0.0/17"
-    error_message = "Adding a country must not change existing zones (R16)."
+    error_message = "Adding a country must not change existing zones (R5)."
   }
 }

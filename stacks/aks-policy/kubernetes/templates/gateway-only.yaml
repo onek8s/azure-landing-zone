@@ -1,4 +1,4 @@
-# Stateless clusters publish applications only through their zone's Gateway, over HTTPS (R9b,
+# Stateless clusters publish applications only through their zone's Gateway, over HTTPS (R22,
 # design sections 4.1 and 2.7). Ingress is refused by the built-in definition (k8s-no-ingress); this
 # adds:
 #

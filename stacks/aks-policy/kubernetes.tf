@@ -6,7 +6,7 @@
 #
 # The stateless cells and the stateful cluster share the subscription, and a Kubernetes definition's
 # rule can test only a cluster's type, location and tags. So the assignments draw the line with
-# not_scopes: the stateless rules leave out the stateful cluster (there is at most one, R9), the
+# not_scopes: the stateless rules leave out the stateful cluster (there is at most one, R19), the
 # stateful rules leave out the stateless cells.
 #
 # Effects:
@@ -15,9 +15,9 @@
 #     once the clusters report no violation of them (aks-terraform's Cluster status lists them);
 #   - the storage rules are enforced (Deny) in every mode: they replace the fleet's
 #     ValidatingAdmissionPolicies, which already refused this, so moving them to the one policy
-#     engine (R14) must not turn them into audit;
+#     engine (R15) must not turn them into audit;
 #   - the mutations are enforced in every mode: they only fill in what a pod leaves out and refuse
-#     nothing, and R17's labels do not work without them.
+#     nothing, and R8's labels do not work without them.
 locals {
   # Platform namespaces of the cluster and of aks-fluxcd-platform: left out of the application
   # rules. The zones' own `<zone>-gateway` and `<zone>-secrets` run on the system pool.

@@ -1,4 +1,4 @@
-# Spot chosen by the application (R17, design section 2.3): a pod labelled platform/capacity: spot
+# Spot chosen by the application (R8, design section 2.3): a pod labelled platform/capacity: spot
 # tolerates the spot pools' taint, platform/capacity=spot:NoSchedule; the cluster autoscaler falls back to
 # the on-demand pool when Azure has no spot capacity. The zones' classic spot pools carry AKS's own spot taint too, kubernetes.azure.com/scalesetpriority=spot:NoSchedule, which AKS
 # puts on every spot pool and cannot be left out - tolerated as well.

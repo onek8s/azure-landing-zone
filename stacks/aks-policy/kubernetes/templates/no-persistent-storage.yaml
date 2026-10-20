@@ -11,7 +11,7 @@
 #
 # Only creation is checked (and the audit of what exists): deleting, or removing a finalizer from,
 # an existing object is never refused. Replaces the fleet's ValidatingAdmissionPolicy
-# `no-persistent-storage`, so there is one policy engine (R14).
+# `no-persistent-storage`, so there is one policy engine (R15).
 apiVersion: templates.gatekeeper.sh/v1
 kind: ConstraintTemplate
 metadata:

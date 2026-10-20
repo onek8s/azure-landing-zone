@@ -1,4 +1,4 @@
-# CPU architecture and spot are the application's choice (R17, design section 2.3), stated with two
+# CPU architecture and spot are the application's choice (R8, design section 2.3), stated with two
 # pod labels and turned into node selection by the platform's mutations:
 #
 #   platform/arch      amd64 (default) | arm64 | multi   -> nodeSelector kubernetes.io/arch

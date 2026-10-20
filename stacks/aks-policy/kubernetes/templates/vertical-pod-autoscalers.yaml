@@ -1,4 +1,4 @@
-# VerticalPodAutoscalers (R11, design section 2.3, "Pod right-sizing"): the VPA add-on resizes the
+# VerticalPodAutoscalers (R23, design section 2.3, "Pod right-sizing"): the VPA add-on resizes the
 # running pods in place, within bounds the application states.
 #
 #   - `updatePolicy.updateMode` one of `allowedModes` (`Off`, `Initial`, `InPlaceOrRecreate` in a
