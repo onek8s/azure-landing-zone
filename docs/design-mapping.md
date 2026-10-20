@@ -73,8 +73,11 @@ reported as *audit only*.
    management machines outside Azure into the management address set (ipg-mgmt, the API server private
    endpoints' NSG) - the build tenant has no VPN gateway (section 7.1).
 4. **Pod-to-pod NSG rule.** The pods have addresses of their zone's pod subnet, so the NSGs let in the cell's
-   pod subnets and the zone route tables send another zone's pods to the hub firewall (D73); Cilium decides
-   inside a zone.
+   pod subnets and the zone route tables send the cell's address spaces to the hub firewall, the zone's own and
+   the system pool's slots excepted (D73, seven routes per zone); Cilium decides inside a zone. An application
+   reaches another zone's application only as a client of that zone's published name, with an application rule in
+   its own rule file (`firewall-applications/`): the firewall proxies it from its own address, so the answer
+   returns through the hub.
 5. **The platform's own Kubernetes rules enforce in the build tenant.** The stateless clusters' "no persistent
    storage" rule denies (it replaced a ValidatingAdmissionPolicy that refused the same), the placement mutations
    are on (they refuse nothing), and each platform validation and Kubernetes built-in that the running cell
