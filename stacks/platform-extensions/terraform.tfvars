@@ -55,6 +55,8 @@ firewall_exposures = {
         # report from every node (a platform flow, not an application's: it showed up in both example namespaces'
         # files until 2026-10-17)
         observability_fqdns = ["*.grafana.net", "stats.grafana.org"]
+        # hello.int-fi.dev.onek8s.lol: refused from every zone after the applications' own rules
+        published_domain = "dev.onek8s.lol"
         zones = {
           int-fi = {
             prefixes        = ["10.100.1.0/24", "100.64.16.0/20"]

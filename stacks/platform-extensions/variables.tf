@@ -304,6 +304,9 @@ variable "firewall_exposures" {
       container_registry = optional(string) # public environment ACR (lab); null with its private endpoint
       # The Grafana collectors' destinations on the Internet (D48); empty with a private endpoint in the hub
       observability_fqdns = optional(list(string), [])
+      # The environment's published names (`<app>.<zone>.<published_domain>`): what no zone reaches unless an
+      # application's rule file names it - the deny that answers last, at once, instead of a timeout. Null: no such rule.
+      published_domain = optional(string)
       zones = map(object({
         prefixes  = list(string) # the zone's /24 in every cell: nodes and internal load balancer
         key_vault = string

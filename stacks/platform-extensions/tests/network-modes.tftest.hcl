@@ -262,6 +262,7 @@ run "firewall_rules_per_application" {
           dev = {
             system_prefixes    = ["172.22.16.0/24", "100.64.0.0/20"]
             platform_key_vault = "kv-onek8s-gwc-platform"
+            published_domain   = "dev.onek8s.lol"
             zones = {
               int-se = { prefixes = ["172.22.18.0/24", "100.64.32.0/20"], key_vault = "kv-onek8s-gwc-int-se" }
             }
@@ -271,6 +272,12 @@ run "firewall_rules_per_application" {
     }
   }
 
+  assert {
+    condition = [
+      for c in azurerm_firewall_policy_rule_collection_group.exposure_environment["dev-int"].application_rule_collection : "${c.priority} ${c.action} ${join(",", flatten(c.rule[*].destination_fqdns))}" if c.name == "dev-int-published-names-deny"
+    ] == ["500 Deny *.dev.onek8s.lol"]
+    error_message = "The environment's published names are refused last, after the applications' own rules (priority 400)."
+  }
   assert {
     condition = (
       [for c in azurerm_firewall_policy_rule_collection_group.exposure_environment["dev-int"].application_rule_collection : c.priority if c.name == "dev-int-applications"] == [400] &&
