@@ -1,6 +1,6 @@
 # Deploying the build tenant and the dev environment
 
-This is phase 1 (Foundation) of the [implementation project](https://github.com/onek8s/onek8s.github.io/blob/main/docs/7.1-implementation-project-and-acceptance-testing.md):
+This is phase 1 (Foundation) of the [implementation project](https://github.com/onek8s/onek8s.github.io/blob/main/archive/7.1-implementation-project-and-acceptance-testing.md):
 build tenant, management and hub, `sub-aks-dev`, pipelines with OIDC, Azure Policy in audit mode and the client
 VNet. **Exit criterion: a stateless cell can be created and deleted by the pipeline** (step 8). The clusters
 themselves - the cells, their networks, Key Vaults and Traffic Manager - are
@@ -261,7 +261,7 @@ the design:
 | Key Vaults | standard, software-protected cluster keys (RSA) | premium, RSA-HSM | aks-terraform `shared/` – changing it later replaces the cluster keys, so rebuild the cells |
 | Traffic Manager | one profile per external hostname | the same | aks-terraform `shared/`: `global_hostnames` |
 | AKS | Free tier, 1 system node, public API server | Standard tier, 3 system nodes, private API server | `sku_tier`, `default_node_pool.node_count`, `private_cluster_enabled` in aks-terraform's `envs/dev-ext-stateless-az*.tfvars` |
-| Monitoring | none for now - observability is set up later: no Log Analytics, no Container Insights, no VM Insights, no diagnostic settings | Log Analytics, Container Insights, control plane diagnostics (no Defender: a third-party security tool, design D81) | to be designed with the observability stack ([section 6.2](https://onek8s.github.io/docs/6.2-observability-with-grafana-cloud.html)) |
+| Monitoring | none for now - observability is set up later: no Log Analytics, no Container Insights, no VM Insights, no diagnostic settings | Log Analytics, Container Insights, control plane diagnostics (no Defender: a third-party security tool, design D81) | to be designed with the observability stack ([section 6.2](https://onek8s.github.io/design/6.2-observability-with-grafana-cloud.html)) |
 | Private link DNS zones | Key Vault and ACR only | all ~90 ALZ zones | `private_link_private_dns_zones` in the accelerator config (remove it for all zones); add a zone there and in `modules/platform-lookup` before a stack uses it |
 | Private DNS Resolver | not deployed – sandbox spokes use Azure DNS with the hub zones linked | inbound endpoint for the corporate DNS forwarders | `primary_private_dns_resolver_enabled` in the accelerator config |
 | Runner image registry | only while runners exist – without them the environment ACR of aks-terraform is the only registry | Premium, private endpoint | `github_runner_token` / `github_runner_app_*`, `runner_registry_sku` |
@@ -336,7 +336,7 @@ registrar, so its name servers must not change) and the GitHub settings stay. It
 
 ## Phase 3: switch from audit to deny
 
-Before acceptance testing every policy goes to its production effect (section 7.1, "Switch policies to deny first"):
+Before acceptance testing every policy goes to its production effect (requirements 0.3, "Switch policies to deny first"):
 
 - `policy_enforcement_mode = "Default"` in `accelerator/config/platform-landing-zone.tfvars` (then
   `scripts/sync-platform.sh`) and in `environments/dev/policy.tfvars`,
