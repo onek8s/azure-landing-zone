@@ -16,6 +16,7 @@ on:
       - modules/address-plan/**
       - modules/platform-lookup/**
       - modules/labfw/**
+      - modules/firewall-log-summaries/**
       - .github/workflows/platform.yaml
       - .github/workflows/terraform-stack.yaml
   pull_request:
@@ -26,6 +27,7 @@ on:
       - modules/address-plan/**
       - modules/platform-lookup/**
       - modules/labfw/**
+      - modules/firewall-log-summaries/**
   workflow_dispatch:
     inputs:
       terraform_action:

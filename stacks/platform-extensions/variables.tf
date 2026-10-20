@@ -197,6 +197,13 @@ variable "labfw" {
       # false: data, queries and the agent's endpoint only through the hub's Azure Monitor Private Link scope
       # (monitor_private_link)
       public_network_access = optional(bool, true)
+      # Summary rules (modules/firewall-log-summaries, design D84): FirewallDeniedFlows_CL and FirewallRuleHits_CL per
+      # hour, FirewallZoneTraffic_CL per day, each source attributed to its environment and zone
+      summaries = optional(object({
+        enabled               = optional(bool, true)
+        hourly_retention_days = optional(number, 90)
+        daily_retention_days  = optional(number, 395) # 13 months, like metrics
+      }), {})
     }), {})
     # WireGuard for agent and management machines outside Azure: the pool counts as management (ipg-mgmt, the API
     # server private endpoints' NSG). Clients bring their own key pair; only public keys are listed here.

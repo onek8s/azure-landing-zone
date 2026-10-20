@@ -44,7 +44,7 @@ Build tenant (not connected to the corporate network)
 | [`stacks/aks-policy`](stacks/aks-policy) | Azure Policy of the AKS platform (section 2.7) on the environment subscription: built-ins and the platform's own `Microsoft.Kubernetes.Data` definitions and mutations (`kubernetes/`, tested with gator) | AKS policy workflow |
 | [`network-mode.tfvars`](network-mode.tfvars) | `firewall` (design), `sandbox` (lab without Azure Firewall: direct peerings, NSGs, NAT gateways) or `labfw` (the lab's: firewall mode with labfw in the hub enforcing the Firewall Policies instead of Azure Firewall, optional WireGuard VPN) – switch with `scripts/set-network-mode.sh` | all workflows |
 | [`environments/dev`](environments/dev) | Parameters of dev: `policy.tfvars` | – |
-| [`modules`](modules) | `address-plan` (section 3.1, with tests), `platform-lookup`, `labfw` (labfw VM in the hub; `vendor/` from onek8s/azure-lab-fw) | – |
+| [`modules`](modules) | `address-plan` (section 3.1, with tests), `platform-lookup`, `labfw` (labfw VM in the hub; `vendor/` from onek8s/azure-lab-fw), `firewall-log-summaries` (the hub Firewall's log summaries, design D84) | – |
 | [`scripts`](scripts) | `sync-platform.sh` (accelerator output), `set-network-mode.sh` (firewall / sandbox / labfw), `update-policy-enforcement.sh` (audit switch for every ALZ assignment), `vendor-labfw.sh` (refresh `modules/labfw/vendor`) | – |
 
 Country codes `fi` / `se`, the test domain and all IP ranges are the examples of the design; replace them with the
@@ -56,3 +56,20 @@ prefixes reserved from the corporate IPAM before deploying.
 application and what it reaches through the hub firewall - with the application that asked for each rule, which the
 firewall itself cannot tell (OneK8s design section 5.3). The pages are generated from the rule files in
 `stacks/platform-extensions/firewall-applications/` and the applications' own configuration; do not edit them by hand.
+
+## labfw's log and its summaries
+
+labfw writes its denied connections (AZFW column names) to the Log Analytics workspace `log-labfw-germanywestcentral`,
+table `LabfwFirewallLog_CL`, where the egress agent reads them. Three summary rules there
+([`modules/firewall-log-summaries`](modules/firewall-log-summaries/README.md), design D84) aggregate it into
+`FirewallDeniedFlows_CL` and `FirewallRuleHits_CL` every hour (90 days) and `FirewallZoneTraffic_CL` every day
+(395 days), each source attributed to its environment and isolation zone (or `system`, `shared`, the build tenant's
+`management`, `client`, `vpn`, `hub`, else `other`); a bin shows up 1-2 hours after it closes, the daily one the next
+day. The workspace takes no public queries: check from the labfw VPN or the portal - the workspace's *Summary rules*
+blade lists the three rules, and
+
+```kusto
+FirewallDeniedFlows_CL | where TimeGenerated > ago(3h) | summarize sum(Count) by Zone, Destination
+FirewallRuleHits_CL | summarize sum(Count) by Zone, Action, Rule, ActionReason
+LASummaryLogs | summarize count() by RuleName, Status
+```
