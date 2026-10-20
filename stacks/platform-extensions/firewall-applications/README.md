@@ -4,7 +4,10 @@ What each application may reach outside the landing zone, one file per applicati
 `<env>-<exposure>/<namespace>.yaml` (`dev-int/int-se-example.yaml`). `main.firewall.policies.tf` turns each into
 application rules of its environment's rule collection group in the exposure's child Firewall Policy
 (`<env>-<exposure>-applications`, priority 400), named `<namespace>-<protocol>-<port>`, from the application's zone
-(the zone's IP group: the firewall tells zones apart by their subnets, not applications within one).
+(the zone's IP group: the firewall tells zones apart by their subnets, not applications within one). A destination
+is any name the application calls as a client: an API on the internet, a PaaS endpoint, or another zone's published
+name (`<app>.<zone>.<env>.onek8s.lol`, the entry point of that zone's gateway) - zones are never connected directly,
+and the firewall proxies an application rule from its own address, so the other zone's gateway answers through the hub.
 
 ```yaml
 zone: int-se                      # the zone the namespace is in; the namespace must be <zone>-<app>
