@@ -11,3 +11,8 @@ egress:
     protocol: https
     reason: "aks-hello fetches a weather forecast from the internet (api.open-meteo.com) as configured in firewall-egress-int-fi/kustomization.yaml (Helsinki)"
     evidence: "the same application as int-se-example (its rule of 2026-10-15), deployed into int-fi on 2026-10-20 as the cell's second zone"
+  - fqdn: hello.int-se.dev.onek8s.lol
+    port: 443
+    protocol: https
+    reason: "aks-hello in int-fi-example needs to reach its peer in int-se zone by its published name, as configured in apps/firewall-egress-int-fi/kustomization.yaml line 33-34"
+    evidence: "122 denied connections from pods aks-hello in namespace int-fi-example on cluster aks-dev-int-stateless-az3, first seen 2026-10-20T14:24:56Z, last seen 2026-10-20T15:24:59Z"
