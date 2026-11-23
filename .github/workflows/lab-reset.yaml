@@ -1,9 +1,9 @@
 ---
-# Lab reset: removes everything the platform and AKS stacks created in the build tenant lab, including their
-# Terraform state, so the lab can be redeployed from scratch (scripts/reset-lab.sh has the details). The
-# subscriptions, the accelerator bootstrap (Terraform state storage, plan / apply identities, the `alz`
-# management group), the public DNS zone (rg-onek8s-dns) and the GitHub configuration stay; with skip_policies (the
-# default) also the management groups and Azure Policy with their Terraform state. Manual only; the apply environment's reviewers approve it.
+# Lab reset: removes everything the platform and AKS stacks created in the build tenant lab - resource groups, Azure
+# Policy, the management groups below `alz` - and then their Terraform state, so the lab can be redeployed from
+# scratch (scripts/reset-lab.sh). The subscriptions, the accelerator bootstrap (state storage, plan / apply
+# identities, the `alz` management group), the public DNS zone (rg-onek8s-dns) and the GitHub configuration stay.
+# Manual only; the apply environment's reviewers approve it.
 name: Lab reset
 
 on:
@@ -17,18 +17,6 @@ on:
         description: Only list what would be deleted
         type: boolean
         default: true
-      skip_policies:
-        description: Keep Azure Policy and the management groups (their removal takes most of the time)
-        type: boolean
-        default: true
-      max_passes:
-        description: Deletion passes (failed deletions are retried in the next pass)
-        type: number
-        default: 5
-      redeploy:
-        description: Start the Platform workflow afterwards (only when the reset completed)
-        type: boolean
-        default: false
 
 concurrency:
   group: lab-reset
@@ -43,7 +31,6 @@ jobs:
     permissions:
       id-token: write
       contents: read
-      actions: write # start the Platform workflow (redeploy)
     steps:
       - name: Confirm
         if: inputs.confirm != 'reset-lab'
@@ -89,18 +76,8 @@ jobs:
           # rg-onek8s-dns: the public DNS zone onek8s.lol, created outside Terraform and delegated at the registrar
           PROTECTED_RG_REGEX: ^(rg-alz-build-|rg-onek8s-dns$|${{ vars.BACKEND_AZURE_RESOURCE_GROUP_NAME }}$)
           DRY_RUN: ${{ inputs.dry_run }}
-          SKIP_POLICIES: ${{ inputs.skip_policies }}
-          MAX_PASSES: ${{ inputs.max_passes }}
-          # for the script's re-login with a fresh OIDC token (the first one expires during a long reset)
+          # the script signs in again with a fresh OIDC token (the first one expires during a long reset)
           AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
         run: scripts/reset-lab.sh
-
-      - name: Redeploy the platform
-        if: inputs.redeploy && !inputs.dry_run
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh workflow run platform.yaml --repo "${{ github.repository }}" --ref "${{ github.ref_name }}" -f terraform_action=apply
-          echo "Platform workflow started; approve its apply jobs, then run AKS policy and onek8s/aks-terraform's Deploy."
