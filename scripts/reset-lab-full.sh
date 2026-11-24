@@ -12,7 +12,9 @@
 # these scopes (all but your own, so the run cannot lock you out), every resource group, soft-deleted Key Vaults
 # (purged; those with purge protection cannot be and keep their names until their retention ends), custom policy
 # (set) definitions, custom roles, and the management groups (the subscriptions are moved to the Tenant Root Group
-# first). Kept: the Tenant Root Group, the subscriptions themselves and your own role assignments.
+# first). Kept: the Tenant Root Group, the subscriptions themselves, your own role assignments and Azure's own system
+# policy assignments (`sys.*`, e.g. sys.mfa-write / sys.mfa-delete: Microsoft-managed, nobody in the tenant can
+# delete them).
 #
 # Environment: PASSES (5).
 set -uo pipefail
@@ -121,7 +123,7 @@ pass() {
   step "policy assignments, exemptions, role assignments"
   for scope in $scopes; do
     log "  scanning $(label "$scope")"
-    for name in $(az policy assignment list --scope "$scope" --query "[?scope=='$scope'].name" -o tsv 2>/dev/null); do
+    for name in $(az policy assignment list --scope "$scope" --query "[?scope=='$scope' && !starts_with(name, 'sys.')].name" -o tsv 2>/dev/null); do
       del "policy assignment $scope/$name" az policy assignment delete --scope "$scope" --name "$name"
     done
     for id in $(az policy exemption list --scope "$scope" --query "[?starts_with(id, '$scope/')].id" -o tsv 2>/dev/null); do

@@ -340,7 +340,8 @@ registrar, so its name servers must not change) and the GitHub settings stay. It
 to run when `az login` is signed in to any other tenant), including what Lab
 reset keeps (the accelerator bootstrap, `rg-onek8s-dns`, the `alz` management group). It reads the subscriptions and
 management groups from Azure: every enabled subscription of the tenant and every management group below the Tenant
-Root Group. Only the subscriptions, the Tenant Root Group and your own role assignments stay. It has no workflow: run
+Root Group. Only the subscriptions, the Tenant Root Group, your own role assignments and Azure's own `sys.*` policy
+assignments (Microsoft-managed, e.g. `sys.mfa-write`) stay. It has no workflow: run
 it with elevated access (Owner at the Tenant Root Group). It is a dry run unless you pass `--apply` and then type the
 tenant ID.
 
