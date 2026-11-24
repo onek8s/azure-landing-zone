@@ -17,8 +17,12 @@
 # Environment: PASSES (5).
 set -uo pipefail
 
+START=$SECONDS
+log() { printf '%s [%4ds] %s\n' "$(date +%H:%M:%S)" $((SECONDS - START)) "$*"; } # time, elapsed, message
+
 # Safety check: the only tenant this script may empty (the OneK8s build tenant lab).
 LAB_TENANT="c7496d01-3dde-45a1-9cda-11cc2f3edace"
+log "checking the az login tenant"
 az account show -o none 2>/dev/null || { echo "Sign in first: az login --tenant $LAB_TENANT" >&2; exit 1; }
 TENANT="$(az account show --query tenantId -o tsv)"
 if [ "$TENANT" != "$LAB_TENANT" ]; then
@@ -37,14 +41,28 @@ PASSES="${PASSES:-5}"
 MG="/providers/Microsoft.Management/managementGroups"
 
 az config set extension.use_dynamic_install=yes_without_prompt >/dev/null 2>&1
+log "looking up your own identity (its role assignments are kept)"
 if [ "$(az account show --query user.type -o tsv)" = servicePrincipal ]; then
   ME="$(az ad sp show --id "$(az account show --query user.name -o tsv)" --query id -o tsv)"
 else
   ME="$(az ad signed-in-user show --query id -o tsv)"
 fi
+log "listing the tenant's subscriptions"
 az account list --refresh -o none 2>/dev/null
-SUBSCRIPTIONS="$(az account list --query "[?tenantId=='$TENANT' && state=='Enabled'].id" -o tsv | xargs)"
+declare -A SUB_NAME
+while IFS=$'\t' read -r id name; do [ -n "$id" ] && SUB_NAME[$id]="$name"; done \
+  < <(az account list --query "[?tenantId=='$TENANT' && state=='Enabled'].[id, name]" -o tsv)
+SUBSCRIPTIONS="${!SUB_NAME[*]}"
 [ -n "$SUBSCRIPTIONS" ] || { echo "No enabled subscriptions in tenant $TENANT." >&2; exit 1; }
+label() { # a scope as a person reads it
+  case "$1" in
+    "$MG/$TENANT") echo "Tenant Root Group" ;;
+    "$MG"/*) echo "management group ${1##*/}" ;;
+    /subscriptions/*) echo "subscription ${SUB_NAME[${1##*/}]:-${1##*/}}" ;;
+    *) echo "subscription ${SUB_NAME[$1]:-$1}" ;;
+  esac
+}
+log "checking access to the Tenant Root Group"
 az account management-group show --name "$TENANT" -o none >/dev/null 2>&1 \
   || { echo "Cannot read the Tenant Root Group: elevate access (Owner at the Tenant Root Group) first." >&2; exit 1; }
 
@@ -63,11 +81,21 @@ mgs() { # every management group below the Tenant Root Group, deepest first
     [w(1)] | sort_by(-.d) | .[].name' 
 }
 
+step_found=0
+step() { # <title>: closes the previous step with its count, opens the next one
+  [ -n "${step_title:-}" ] && log "    $((found - step_found)) found in: $step_title"
+  step_title="$1" step_found=$found
+  [ -n "$1" ] && log "--- $1"
+}
+
 pass() {
-  local tree scopes prefixes sub scope id name rg managed kind where deleting=()
+  local tree scopes prefixes sub scope id name rg managed kind where t deleting=()
+  log "reading the management group tree"
   tree="$(mgs | tr '\n' ' ')"
+  log "  $(wc -w <<<"$tree") management groups below the Tenant Root Group, $(wc -w <<<"$SUBSCRIPTIONS") subscriptions"
   scopes="$(printf "$MG/%s\n" "$TENANT" $tree; printf '/subscriptions/%s\n' $SUBSCRIPTIONS)"
   prefixes="$(jq -Rnc '[inputs | ascii_downcase]' <<<"$scopes")"
+  log "checking access to the subscriptions"
   for sub in $SUBSCRIPTIONS; do # an unreadable subscription would look empty, i.e. done
     az group list --subscription "$sub" -o none >/dev/null 2>&1 || {
       echo "Cannot read subscription $sub any more: give yourself Owner at the Tenant Root Group and run again." >&2
@@ -75,8 +103,9 @@ pass() {
     }
   done
 
-  echo "--- locks, budgets, subscription diagnostic settings"
+  step "locks, budgets, subscription diagnostic settings"
   for sub in $SUBSCRIPTIONS; do
+    log "  scanning $(label "$sub")"
     for id in $(az lock list --subscription "$sub" --query "[].id" -o tsv 2>/dev/null); do
       del "lock $id" az lock delete --ids "$id"
     done
@@ -89,8 +118,9 @@ pass() {
     done
   done
 
-  echo "--- policy assignments, exemptions, role assignments"
+  step "policy assignments, exemptions, role assignments"
   for scope in $scopes; do
+    log "  scanning $(label "$scope")"
     for name in $(az policy assignment list --scope "$scope" --query "[?scope=='$scope'].name" -o tsv 2>/dev/null); do
       del "policy assignment $scope/$name" az policy assignment delete --scope "$scope" --name "$name"
     done
@@ -104,22 +134,30 @@ pass() {
            | [.id, "\(.roleDefinitionName) for \(.principalName // .principalId)"] | @tsv')
   done
 
-  echo "--- resource groups"
+  step "resource groups"
   for sub in $SUBSCRIPTIONS; do
+    log "  scanning $(label "$sub")"
     while IFS=$'\t' read -r rg managed; do
       [ -z "$rg" ] && continue
-      [ -n "$managed" ] && [ "$managed" != None ] && continue # goes with its owner (AKS node resource group)
-      del "resource group $sub/$rg" az group delete --subscription "$sub" -n "$rg" --yes --no-wait && deleting+=("$sub/$rg")
+      [ -n "$managed" ] && [ "$managed" != None ] && { echo "  later: $rg (goes with its owner)"; continue; }
+      del "resource group $rg in $(label "$sub")" az group delete --subscription "$sub" -n "$rg" --yes --no-wait && deleting+=("$sub/$rg")
     done < <(az group list --subscription "$sub" --query "[].[name, managedBy]" -o tsv 2>/dev/null)
   done
+  [ "$DRY_RUN" = true ] || [ ${#deleting[@]} -eq 0 ] \
+    || log "  waiting for ${#deleting[@]} resource groups to be deleted (they are deleted in parallel; up to an hour each)"
   [ "$DRY_RUN" = true ] || for item in "${deleting[@]}"; do
-    echo "  waiting for $item"
-    az group wait --subscription "${item%%/*}" -n "${item#*/}" --deleted --timeout 3600 >/dev/null 2>&1 \
-      || echo "  $item is still being deleted"
+    t=$SECONDS
+    log "  waiting for $(label "${item%%/*}") / ${item#*/}"
+    if az group wait --subscription "${item%%/*}" -n "${item#*/}" --deleted --timeout 3600 >/dev/null 2>&1; then
+      log "    gone after $((SECONDS - t))s"
+    else
+      log "    still being deleted after $((SECONDS - t))s, checked again in the next pass"
+    fi
   done
 
-  echo "--- soft-deleted Key Vaults"
+  step "soft-deleted Key Vaults"
   for sub in $SUBSCRIPTIONS; do
+    log "  scanning $(label "$sub")"
     while IFS=$'\t' read -r name protected; do
       [ -z "$name" ] && continue
       [ "$protected" = true ] && { echo "  kept: $name (purge protection, gone when its retention ends)"; continue; }
@@ -128,8 +166,9 @@ pass() {
       --query "[].[name, properties.purgeProtectionEnabled]" -o tsv 2>/dev/null)
   done
 
-  echo "--- custom policy (set) definitions, custom roles"
+  step "custom policy (set) definitions, custom roles"
   for scope in $scopes; do
+    log "  scanning $(label "$scope") for policy definitions"
     [[ "$scope" == "$MG"/* ]] && where=(--management-group "${scope##*/}") || where=(--subscription "${scope##*/}")
     for kind in set-definition definition; do
       for name in $(az policy $kind list "${where[@]}" \
@@ -138,6 +177,7 @@ pass() {
       done
     done
   done
+  log "  scanning every scope for custom roles"
   while IFS=$'\t' read -r id scope name; do # every custom role whose assignable scopes all lie in this tenant
     [ -n "$id" ] && del "custom role '$name'" az role definition delete --name "${id##*/}" --scope "$scope"
   done < <(for scope in $scopes; do az role definition list --custom-role-only true --scope "$scope" -o json 2>/dev/null; done \
@@ -145,38 +185,41 @@ pass() {
         | select(all(.assignableScopes[] | ascii_downcase; . as $x | any($p[]; $x == . or ($x | startswith(. + "/")))))
         | [.id, .assignableScopes[0], .roleName] | @tsv')
 
-  echo "--- management groups"
+  step "management groups"
   for mg in $tree; do
+    log "  scanning management group $mg"
     for sub in $(az account management-group subscription show-sub-under-mg --name "$mg" --query "[].name" -o tsv 2>/dev/null); do
       del "subscription $sub in $mg (moved to the Tenant Root Group)" \
         az account management-group subscription add --name "$TENANT" --subscription "$sub"
     done
     del "management group $mg" az account management-group delete --name "$mg"
   done
+  step ""
 }
 
 echo "Tenant: $TENANT, signed in as $(az account show --query user.name -o tsv) (your own role assignments stay)"
-echo "Subscriptions: $SUBSCRIPTIONS"
+echo "Subscriptions:"
+for sub in $SUBSCRIPTIONS; do echo "  ${SUB_NAME[$sub]:-?} ($sub)"; done
 
 if [ "$DRY_RUN" = true ]; then
-  echo "=== DRY RUN - nothing is deleted"
+  log "=== DRY RUN - nothing is deleted"
   pass
-  echo "=== dry run: $found items would be deleted; run with --apply to delete them"
+  log "=== dry run: $found items would be deleted; run with --apply to delete them"
   exit 0
 fi
 
 echo
-echo "This deletes EVERYTHING in tenant $TENANT and its subscriptions: $SUBSCRIPTIONS"
+echo "This deletes EVERYTHING in tenant $TENANT and in the subscriptions listed above."
 read -r -p "Type the tenant ID to continue: " answer
 [ "$answer" = "$TENANT" ] || { echo "Aborted."; exit 1; }
 
 for i in $(seq 1 "$PASSES"); do
-  echo "=== pass $i/$PASSES"
+  log "=== pass $i/$PASSES"
   found=0 failed=0
   pass
-  echo "=== pass $i: $found found, $failed failed"
-  [ "$found" -eq 0 ] && { echo "Tenant emptied."; exit 0; }
-  [ "$i" -lt "$PASSES" ] && sleep 60
+  log "=== pass $i: $found found, $failed failed"
+  [ "$found" -eq 0 ] && { log "Tenant emptied."; exit 0; }
+  [ "$i" -lt "$PASSES" ] && { log "pausing 60s before the next pass (deletions in Azure settle)"; sleep 60; }
 done
 echo "Something is still left after $PASSES passes (see above); run the script again." >&2
 exit 1
