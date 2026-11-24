@@ -341,7 +341,8 @@ to run when `az login` is signed in to any other tenant), including what Lab res
 `rg-onek8s-dns`). It reads the subscriptions and management groups from Azure: every enabled subscription of the
 tenant and every management group. The subscriptions and the management group hierarchy stay untouched (nothing is
 moved or deleted); what is in the subscriptions and what is assigned or defined at the management groups goes - policy
-assignments and exemptions, custom policy definitions and roles, role assignments except your own. Azure's own `sys.*`
+assignments and exemptions, custom policy definitions and roles, and the role assignments at the subscriptions except
+your own (those at the management groups stay). Azure's own `sys.*`
 policy assignments (Microsoft-managed, e.g. `sys.mfa-write`) stay too. It has no workflow: run it as a tenant admin
 (Owner at the Tenant Root Group). It is a dry run unless you pass `--apply` and then type the tenant ID.
 

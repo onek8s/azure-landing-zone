@@ -9,10 +9,10 @@
 #
 # Deleted, at the Tenant Root Group, every management group below it and every subscription: resource locks,
 # budgets, subscription diagnostic settings, policy assignments and exemptions, role assignments made directly at
-# these scopes (all but your own, so the run cannot lock you out), every resource group, soft-deleted Key Vaults
+# the subscriptions (all but your own, so the run cannot lock you out; those at the management groups stay), every resource group, soft-deleted Key Vaults
 # (purged; those with purge protection cannot be and keep their names until their retention ends), custom policy
 # (set) definitions and custom roles. Kept: the management groups and the subscriptions (with their placement in the
-# hierarchy), your own role assignments and Azure's own system
+# hierarchy), the role assignments at the management groups, your own role assignments and Azure's own system
 # policy assignments (`sys.*`, e.g. sys.mfa-write / sys.mfa-delete: Microsoft-managed, nobody in the tenant can
 # delete them).
 #
@@ -129,8 +129,9 @@ pass() {
     for id in $(az policy exemption list --scope "$scope" --query "[?starts_with(id, '$scope/')].id" -o tsv 2>/dev/null); do
       del "policy exemption $id" az policy exemption delete --ids "$id"
     done
+    [[ "$scope" == /subscriptions/* ]] || continue # role assignments at the management groups stay
     while IFS=$'\t' read -r id name; do
-      [ -n "$id" ] && del "role assignment $scope: $name" az role assignment delete --ids "$id"
+      [ -n "$id" ] && del "role assignment $(label "$scope"): $name" az role assignment delete --ids "$id"
     done < <(az role assignment list --scope "$scope" -o json 2>/dev/null | jq -r --arg s "$scope" --arg me "$ME" \
       '.[] | select((.scope | ascii_downcase) == ($s | ascii_downcase) and .principalId != $me)
            | [.id, "\(.roleDefinitionName) for \(.principalName // .principalId)"] | @tsv')
