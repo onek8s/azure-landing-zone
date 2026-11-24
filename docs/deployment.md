@@ -334,6 +334,29 @@ registrar, so its name servers must not change) and the GitHub settings stay. It
 - Key Vaults with purge protection (aks-terraform's platform vault) stay soft-deleted for 90 days and keep their
   names; aks-terraform recovers a soft-deleted vault when it creates it again.
 
+### Full lab reset (local)
+
+`scripts/reset-lab-full.sh` empties the lab tenant (`c7496d01-3dde-45a1-9cda-11cc2f3edace`, hardcoded: it refuses
+to run when `az login` is signed in to any other tenant), including what Lab reset keeps (the accelerator bootstrap,
+`rg-onek8s-dns`). It reads the subscriptions and management groups from Azure: every enabled subscription of the
+tenant and every management group. The subscriptions and the management group hierarchy stay untouched (nothing is
+moved or deleted); what is in the subscriptions and what is assigned or defined at the management groups goes - policy
+assignments and exemptions, custom policy definitions and roles, and the role assignments at the subscriptions except
+your own (those at the management groups stay). Azure's own `sys.*`
+policy assignments (Microsoft-managed, e.g. `sys.mfa-write`) stay too. It has no workflow: run it as a tenant admin
+(Owner at the Tenant Root Group). It is a dry run unless you pass `--apply` and then type the tenant ID.
+
+```bash
+scripts/reset-lab-full.sh
+```
+
+```bash
+scripts/reset-lab-full.sh --apply
+```
+
+Redeploying starts again at step 2 (the accelerator bootstrap) and step 3b; the recreated DNS zone gets new name
+servers, so update its NS records at the registrar.
+
 ## Phase 3: switch from audit to deny
 
 Before acceptance testing every policy goes to its production effect (requirements 0.3, "Switch policies to deny first"):
