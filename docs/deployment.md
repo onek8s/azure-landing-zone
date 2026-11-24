@@ -336,7 +336,8 @@ registrar, so its name servers must not change) and the GitHub settings stay. It
 
 ### Full lab reset (local)
 
-`scripts/reset-lab-full.sh` empties the whole tenant you are signed in to with `az login`, including what Lab
+`scripts/reset-lab-full.sh` empties the whole lab tenant (`c7496d01-3dde-45a1-9cda-11cc2f3edace`, hardcoded: it refuses
+to run when `az login` is signed in to any other tenant), including what Lab
 reset keeps (the accelerator bootstrap, `rg-onek8s-dns`, the `alz` management group). It reads the subscriptions and
 management groups from Azure: every enabled subscription of the tenant and every management group below the Tenant
 Root Group. Only the subscriptions, the Tenant Root Group and your own role assignments stay. It has no workflow: run

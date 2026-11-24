@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Removes ABSOLUTELY EVERYTHING from the Azure tenant you are signed in to with `az login`: every enabled
+# Removes ABSOLUTELY EVERYTHING from the lab tenant LAB_TENANT, which you must be signed in to with `az login` (the
+# script refuses to run in any other tenant): every enabled
 # subscription of the tenant you can see and every management group, all read from Azure. Run it by hand as a tenant
 # admin (elevated access: Owner at the Tenant Root Group, so moving subscriptions does not end your access).
 #
@@ -16,6 +17,16 @@
 # Environment: PASSES (5).
 set -uo pipefail
 
+# Safety check: the only tenant this script may empty (the OneK8s build tenant lab).
+LAB_TENANT="c7496d01-3dde-45a1-9cda-11cc2f3edace"
+az account show -o none 2>/dev/null || { echo "Sign in first: az login --tenant $LAB_TENANT" >&2; exit 1; }
+TENANT="$(az account show --query tenantId -o tsv)"
+if [ "$TENANT" != "$LAB_TENANT" ]; then
+  echo "Refusing to run: signed in to tenant '$TENANT', not the lab tenant $LAB_TENANT." >&2
+  echo "Run: az login --tenant $LAB_TENANT" >&2
+  exit 1
+fi
+
 DRY_RUN=true
 case "${1:-}" in
   --apply) DRY_RUN=false ;;
@@ -25,9 +36,7 @@ esac
 PASSES="${PASSES:-5}"
 MG="/providers/Microsoft.Management/managementGroups"
 
-az account show -o none 2>/dev/null || { echo "Sign in first: az login" >&2; exit 1; }
 az config set extension.use_dynamic_install=yes_without_prompt >/dev/null 2>&1
-TENANT="$(az account show --query tenantId -o tsv)"
 if [ "$(az account show --query user.type -o tsv)" = servicePrincipal ]; then
   ME="$(az ad sp show --id "$(az account show --query user.name -o tsv)" --query id -o tsv)"
 else
