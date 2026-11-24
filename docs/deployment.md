@@ -321,14 +321,36 @@ accelerator bootstrap (state storage, plan / apply identities, the `alz` managem
 registrar, so its name servers must not change) and the GitHub settings stay. It runs with the platform apply identity, so its reviewers approve it.
 
 - Type `reset-lab` in *confirm*. *dry_run* (default) only lists what would be deleted.
+- *skip_policies* (default on) keeps the management groups below `alz`, Azure Policy (assignments, exemptions,
+  definitions, the policy identities' role assignments), the ALZ custom roles and their Terraform state
+  (`terraform.tfstate`, `aks-*-policy.tfstate`): their removal takes most of a reset's time. Turn it off for a reset
+  from scratch.
 - Resource groups that other repositories created in the subscriptions go too - e.g. azure-lab-fw's
   `rg-labfw-<region>` with the VM identity its repository variables name: run its **azure-bootstrap** again
   afterwards (its OIDC app survives, its role assignments do not).
-- Deletions run in passes (up to five): a failure is retried in the next pass. The Terraform state is deleted only
-  once a pass finds nothing left; otherwise the run fails and can simply be started again.
-- Afterwards run Platform (apply), AKS policy and aks-terraform's Deploy.
+- Deletions run in passes: a failure is logged and retried in the next pass. The Terraform state is deleted only
+  when nothing is left; otherwise the run fails with the list of leftovers and can simply be started again.
+- *redeploy* starts the Platform workflow afterwards; run AKS policy and aks-terraform's Deploy after it.
 - Key Vaults with purge protection (aks-terraform's platform vault) stay soft-deleted for 90 days and keep their
   names; aks-terraform recovers a soft-deleted vault when it creates it again.
+
+### Full lab reset (local)
+
+`scripts/reset-lab-full.sh` removes absolutely everything, including what Lab reset keeps: the accelerator bootstrap
+(Terraform state, plan / apply identities), `rg-onek8s-dns` with the public zone, the `alz` management group and every
+role assignment at the lab's scopes except your own. Only the subscriptions stay. It has no workflow: run it signed in
+with `az login` as a tenant admin. It is a dry run unless you pass `--apply` and then type `delete-everything`.
+
+```bash
+scripts/reset-lab-full.sh
+```
+
+```bash
+scripts/reset-lab-full.sh --apply
+```
+
+Redeploying starts again at step 2 (the accelerator bootstrap) and step 3b; the recreated DNS zone gets new name
+servers, so update its NS records at the registrar.
 
 ## Phase 3: switch from audit to deny
 
