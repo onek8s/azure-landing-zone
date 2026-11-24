@@ -1,27 +1,20 @@
 #!/usr/bin/env bash
-# Removes ABSOLUTELY EVERYTHING from the build tenant lab - also what the Lab reset workflow keeps. Run it by hand,
-# signed in with `az login` as a tenant admin (Owner on the `alz` management group and the subscriptions, and
-# management group rights at the Tenant Root Group; Owner given directly on the subscriptions or at the Tenant Root
-# Group, since access inherited from `alz` ends when they leave it). There is no workflow for it on purpose.
+# Removes ABSOLUTELY EVERYTHING from the Azure tenant you are signed in to with `az login`: every enabled
+# subscription of the tenant you can see and every management group, all read from Azure. Run it by hand as a tenant
+# admin (elevated access: Owner at the Tenant Root Group, so moving subscriptions does not end your access).
 #
-#   scripts/reset-lab-full.sh            # dry run (the default): lists what would be deleted
-#   scripts/reset-lab-full.sh --apply    # deletes, after you type the confirmation
+#   reset-lab-full.sh            # dry run (the default): lists what would be deleted
+#   reset-lab-full.sh --apply    # deletes, after you type the tenant ID
 #
-# Deleted, in the lab subscriptions and the management group tree ROOT_MG (alz) - the tree included:
-#   resource locks, budgets, the subscriptions' diagnostic settings, policy assignments and exemptions, role
-#   assignments made directly at these scopes (all but your own, so the run cannot lock you out), every resource group
-#   (the accelerator bootstrap with the Terraform state and the plan / apply identities, and rg-onek8s-dns with
-#   the public zone onek8s.lol: its name servers change when it is created again, so the registrar's NS records must
-#   be updated), soft-deleted Key Vaults (purged; those with purge protection cannot be and keep their names for up
-#   to 90 days), custom policy (set) definitions, custom roles assignable only inside the lab, and the management
-#   groups themselves (the subscriptions are moved to the Tenant Root Group first).
-# Kept: the subscriptions themselves and the GitHub configuration. Redeploying starts at docs/deployment.md, step 2
-# (the accelerator bootstrap), then step 3b (DNS zone and the registrar).
+# Deleted, at the Tenant Root Group, every management group below it and every subscription: resource locks,
+# budgets, subscription diagnostic settings, policy assignments and exemptions, role assignments made directly at
+# these scopes (all but your own, so the run cannot lock you out), every resource group, soft-deleted Key Vaults
+# (purged; those with purge protection cannot be and keep their names until their retention ends), custom policy
+# (set) definitions, custom roles, and the management groups (the subscriptions are moved to the Tenant Root Group
+# first). Kept: the Tenant Root Group, the subscriptions themselves and your own role assignments.
 #
-# Environment: SUBSCRIPTIONS (space-separated; default: the subscriptions in the repository's configuration),
-# ROOT_MG (alz), PASSES (5).
+# Environment: PASSES (5).
 set -uo pipefail
-cd "$(dirname "$0")/.."
 
 DRY_RUN=true
 case "${1:-}" in
@@ -29,7 +22,6 @@ case "${1:-}" in
   "" | --dry-run) ;;
   *) echo "usage: $0 [--dry-run | --apply]" >&2; exit 2 ;;
 esac
-ROOT_MG="${ROOT_MG:-alz}"
 PASSES="${PASSES:-5}"
 MG="/providers/Microsoft.Management/managementGroups"
 
@@ -41,21 +33,11 @@ if [ "$(az account show --query user.type -o tsv)" = servicePrincipal ]; then
 else
   ME="$(az ad signed-in-user show --query id -o tsv)"
 fi
-
-if [ -z "${SUBSCRIPTIONS:-}" ]; then # as the Lab reset workflow finds them
-  SUBSCRIPTIONS="$( {
-    python3 -I -c 'import sys, yaml; print("\n".join(v for v in yaml.safe_load(open(sys.argv[1]))["subscription_ids"].values() if v))' \
-      accelerator/config/inputs.yaml
-    cat stacks/platform-extensions/terraform.tfvars environments/*/*.tfvars 2>/dev/null \
-      | sed -nE 's/^ *subscription_id *= *"([0-9a-f-]{36})".*/\1/p'
-  } | sort -u | tr '\n' ' ')"
-fi
-subs=""
-for sub in $SUBSCRIPTIONS; do
-  if az account show --subscription "$sub" -o none 2>/dev/null; then subs="$subs $sub"; else echo "skipped $sub (not accessible)"; fi
-done
-SUBSCRIPTIONS="${subs# }"
-[ -n "$SUBSCRIPTIONS" ] || { echo "No accessible lab subscriptions." >&2; exit 1; }
+az account list --refresh -o none 2>/dev/null
+SUBSCRIPTIONS="$(az account list --query "[?tenantId=='$TENANT' && state=='Enabled'].id" -o tsv | xargs)"
+[ -n "$SUBSCRIPTIONS" ] || { echo "No enabled subscriptions in tenant $TENANT." >&2; exit 1; }
+az account management-group show --name "$TENANT" -o none >/dev/null 2>&1 \
+  || { echo "Cannot read the Tenant Root Group: elevate access (Owner at the Tenant Root Group) first." >&2; exit 1; }
 
 found=0 failed=0
 del() { # <description> <command...>
@@ -66,22 +48,20 @@ del() { # <description> <command...>
   else failed=$((failed + 1)); echo "  FAILED: $what: $(tail -n 2 <<<"$out" | tr '\n' ' ')"; return 1; fi
 }
 
-mgs() { # ROOT_MG and every management group below it, deepest first (none once ROOT_MG is gone)
-  az account management-group show --name "$ROOT_MG" --expand --recurse -o json 2>/dev/null | jq -r '
-    def w($d): {name, d: $d}, ((.children // [])[] | select(.type | endswith("managementGroups")) | w($d + 1));
-    [w(0)] | sort_by(-.d) | .[].name'
+mgs() { # every management group below the Tenant Root Group, deepest first
+  az account management-group show --name "$TENANT" --expand --recurse -o json 2>/dev/null | jq -r '
+    def w($d): (.children // [])[] | select(.type | endswith("managementGroups")) | ({name, d: $d}, w($d + 1));
+    [w(1)] | sort_by(-.d) | .[].name' 
 }
 
 pass() {
   local tree scopes prefixes sub scope id name rg managed kind where deleting=()
   tree="$(mgs | tr '\n' ' ')"
-  scopes="$(printf "$MG/%s\n" $tree; printf '/subscriptions/%s\n' $SUBSCRIPTIONS)"
+  scopes="$(printf "$MG/%s\n" "$TENANT" $tree; printf '/subscriptions/%s\n' $SUBSCRIPTIONS)"
   prefixes="$(jq -Rnc '[inputs | ascii_downcase]' <<<"$scopes")"
   for sub in $SUBSCRIPTIONS; do # an unreadable subscription would look empty, i.e. done
-    az group list --subscription "$sub" -o none 2>/dev/null || {
-      echo "Cannot read subscription $sub any more. If your access came from the $ROOT_MG management group, it ended" \
-        "when the subscription left it: assign yourself Owner on the subscription (or at the Tenant Root Group) and" \
-        "run the script again." >&2
+    az group list --subscription "$sub" -o none >/dev/null 2>&1 || {
+      echo "Cannot read subscription $sub any more: give yourself Owner at the Tenant Root Group and run again." >&2
       exit 1
     }
   done
@@ -149,14 +129,14 @@ pass() {
       done
     done
   done
-  while IFS=$'\t' read -r id scope name; do # every custom role whose assignable scopes all lie inside the lab
+  while IFS=$'\t' read -r id scope name; do # every custom role whose assignable scopes all lie in this tenant
     [ -n "$id" ] && del "custom role '$name'" az role definition delete --name "${id##*/}" --scope "$scope"
   done < <(for scope in $scopes; do az role definition list --custom-role-only true --scope "$scope" -o json 2>/dev/null; done \
     | jq -rs --argjson p "$prefixes" 'add // [] | unique_by(.name)[]
         | select(all(.assignableScopes[] | ascii_downcase; . as $x | any($p[]; $x == . or ($x | startswith(. + "/")))))
         | [.id, .assignableScopes[0], .roleName] | @tsv')
 
-  echo "--- management groups ($ROOT_MG and below)"
+  echo "--- management groups"
   for mg in $tree; do
     for sub in $(az account management-group subscription show-sub-under-mg --name "$mg" --query "[].name" -o tsv 2>/dev/null); do
       del "subscription $sub in $mg (moved to the Tenant Root Group)" \
@@ -166,9 +146,8 @@ pass() {
   done
 }
 
-echo "Signed in to tenant $TENANT as $(az account show --query user.name -o tsv) (your own role assignments stay)"
+echo "Tenant: $TENANT, signed in as $(az account show --query user.name -o tsv) (your own role assignments stay)"
 echo "Subscriptions: $SUBSCRIPTIONS"
-echo "Management groups: $ROOT_MG and everything below it"
 
 if [ "$DRY_RUN" = true ]; then
   echo "=== DRY RUN - nothing is deleted"
@@ -178,16 +157,16 @@ if [ "$DRY_RUN" = true ]; then
 fi
 
 echo
-echo "This deletes EVERYTHING listed above, including the bootstrap, the Terraform state and the public DNS zone."
-read -r -p "Type 'delete-everything' to continue: " answer
-[ "$answer" = delete-everything ] || { echo "Aborted."; exit 1; }
+echo "This deletes EVERYTHING in tenant $TENANT and its subscriptions: $SUBSCRIPTIONS"
+read -r -p "Type the tenant ID to continue: " answer
+[ "$answer" = "$TENANT" ] || { echo "Aborted."; exit 1; }
 
 for i in $(seq 1 "$PASSES"); do
   echo "=== pass $i/$PASSES"
   found=0 failed=0
   pass
   echo "=== pass $i: $found found, $failed failed"
-  [ "$found" -eq 0 ] && { echo "Lab fully removed."; exit 0; }
+  [ "$found" -eq 0 ] && { echo "Tenant emptied."; exit 0; }
   [ "$i" -lt "$PASSES" ] && sleep 60
 done
 echo "Something is still left after $PASSES passes (see above); run the script again." >&2
