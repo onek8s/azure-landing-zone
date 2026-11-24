@@ -336,14 +336,14 @@ registrar, so its name servers must not change) and the GitHub settings stay. It
 
 ### Full lab reset (local)
 
-`scripts/reset-lab-full.sh` empties the whole lab tenant (`c7496d01-3dde-45a1-9cda-11cc2f3edace`, hardcoded: it refuses
-to run when `az login` is signed in to any other tenant), including what Lab
-reset keeps (the accelerator bootstrap, `rg-onek8s-dns`, the `alz` management group). It reads the subscriptions and
-management groups from Azure: every enabled subscription of the tenant and every management group below the Tenant
-Root Group. Only the subscriptions, the Tenant Root Group, your own role assignments and Azure's own `sys.*` policy
-assignments (Microsoft-managed, e.g. `sys.mfa-write`) stay. It has no workflow: run
-it with elevated access (Owner at the Tenant Root Group). It is a dry run unless you pass `--apply` and then type the
-tenant ID.
+`scripts/reset-lab-full.sh` empties the lab tenant (`c7496d01-3dde-45a1-9cda-11cc2f3edace`, hardcoded: it refuses
+to run when `az login` is signed in to any other tenant), including what Lab reset keeps (the accelerator bootstrap,
+`rg-onek8s-dns`). It reads the subscriptions and management groups from Azure: every enabled subscription of the
+tenant and every management group. The subscriptions and the management group hierarchy stay untouched (nothing is
+moved or deleted); what is in the subscriptions and what is assigned or defined at the management groups goes - policy
+assignments and exemptions, custom policy definitions and roles, role assignments except your own. Azure's own `sys.*`
+policy assignments (Microsoft-managed, e.g. `sys.mfa-write`) stay too. It has no workflow: run it as a tenant admin
+(Owner at the Tenant Root Group). It is a dry run unless you pass `--apply` and then type the tenant ID.
 
 ```bash
 scripts/reset-lab-full.sh

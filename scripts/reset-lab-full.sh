@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Removes ABSOLUTELY EVERYTHING from the lab tenant LAB_TENANT, which you must be signed in to with `az login` (the
-# script refuses to run in any other tenant): every enabled
-# subscription of the tenant you can see and every management group, all read from Azure. Run it by hand as a tenant
-# admin (elevated access: Owner at the Tenant Root Group, so moving subscriptions does not end your access).
+# Removes everything inside the lab tenant LAB_TENANT, which you must be signed in to with `az login` (the script
+# refuses to run in any other tenant): every enabled subscription of the tenant you can see and every management
+# group, all read from Azure. The subscriptions and the management group hierarchy themselves stay untouched: nothing
+# is moved and no management group is deleted. Run it by hand as a tenant admin (Owner at the Tenant Root Group).
 #
 #   reset-lab-full.sh            # dry run (the default): lists what would be deleted
 #   reset-lab-full.sh --apply    # deletes, after you type the tenant ID
@@ -11,8 +11,8 @@
 # budgets, subscription diagnostic settings, policy assignments and exemptions, role assignments made directly at
 # these scopes (all but your own, so the run cannot lock you out), every resource group, soft-deleted Key Vaults
 # (purged; those with purge protection cannot be and keep their names until their retention ends), custom policy
-# (set) definitions, custom roles, and the management groups (the subscriptions are moved to the Tenant Root Group
-# first). Kept: the Tenant Root Group, the subscriptions themselves, your own role assignments and Azure's own system
+# (set) definitions and custom roles. Kept: the management groups and the subscriptions (with their placement in the
+# hierarchy), your own role assignments and Azure's own system
 # policy assignments (`sys.*`, e.g. sys.mfa-write / sys.mfa-delete: Microsoft-managed, nobody in the tenant can
 # delete them).
 #
@@ -77,7 +77,7 @@ del() { # <description> <command...>
   else failed=$((failed + 1)); echo "  FAILED: $what: $(tail -n 2 <<<"$out" | tr '\n' ' ')"; return 1; fi
 }
 
-mgs() { # every management group below the Tenant Root Group, deepest first
+mgs() { # every management group below the Tenant Root Group
   az account management-group show --name "$TENANT" --expand --recurse -o json 2>/dev/null | jq -r '
     def w($d): (.children // [])[] | select(.type | endswith("managementGroups")) | ({name, d: $d}, w($d + 1));
     [w(1)] | sort_by(-.d) | .[].name' 
@@ -92,7 +92,7 @@ step() { # <title>: closes the previous step with its count, opens the next one
 
 pass() {
   local tree scopes prefixes sub scope id name rg managed kind where t deleting=()
-  log "reading the management group tree"
+  log "reading the management group tree (kept; only what is assigned or defined at it goes)"
   tree="$(mgs | tr '\n' ' ')"
   log "  $(wc -w <<<"$tree") management groups below the Tenant Root Group, $(wc -w <<<"$SUBSCRIPTIONS") subscriptions"
   scopes="$(printf "$MG/%s\n" "$TENANT" $tree; printf '/subscriptions/%s\n' $SUBSCRIPTIONS)"
@@ -187,15 +187,6 @@ pass() {
         | select(all(.assignableScopes[] | ascii_downcase; . as $x | any($p[]; $x == . or ($x | startswith(. + "/")))))
         | [.id, .assignableScopes[0], .roleName] | @tsv')
 
-  step "management groups"
-  for mg in $tree; do
-    log "  scanning management group $mg"
-    for sub in $(az account management-group subscription show-sub-under-mg --name "$mg" --query "[].name" -o tsv 2>/dev/null); do
-      del "subscription $sub in $mg (moved to the Tenant Root Group)" \
-        az account management-group subscription add --name "$TENANT" --subscription "$sub"
-    done
-    del "management group $mg" az account management-group delete --name "$mg"
-  done
   step ""
 }
 
