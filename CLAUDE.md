@@ -20,10 +20,8 @@ The one exception is named, not left to the namespace exclusions (2026-10-19, de
 GitHub's webhook deliveries reach over HTTP/1.1 (`<namespace>/<name>`; the definition's default is `[]`) - and since
 2026-10-19 `default/kubernetes`, the API server's own Service.
 
-**Policy `gateway-tls` (2026-10-18, design D70/D71; deny since 2026-10-19, D82):** in every `*-gateway` namespace the ConfigMap `traefik-dynamic`
-(aks-terraform `gateways/traefik`, Traefik's file-provider dynamic configuration) must state `tls.options.default` with
-`alpnProtocols` exactly `[h2]` and `minVersion: VersionTLS13` - HTTP/2 and TLS 1.3 only at the edge, read back so it cannot
-drift. `yaml.unmarshal` works in Gatekeeper's Rego (gator v3.21.1).
+**Policy `gateway-tls` removed (design v4.13, the user's trial of App Routing without Traefik):** App Routing's Istio
+cannot refuse HTTP/1.1 or TLS 1.2 on a listener, so there is nothing to read back; `h2c-upstream` stays (HTTP/2 to the pod).
 
 **Deployment safeguards' mutation report (2026-10-19, #99):** the built-in initiative's one warn-only member,
 `printMutationsAnnotations`, reports every pod carrying Gatekeeper's `gatekeeper.sh/mutations` annotation as
