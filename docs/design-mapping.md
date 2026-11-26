@@ -6,7 +6,7 @@ and where the code implements them. Four repositories share the work:
 | Repository | Role |
 |---|---|
 | **azure-landing-zone** (this one) | Build tenant, management groups, ALZ policy, hub, management and client VNets, deployment identities, the AKS policy assignments (`stacks/aks-policy`) |
-| [aks-terraform](https://github.com/onek8s/aks-terraform) | The clusters and what an environment's clusters share: the cells' networks and NSGs, the platform and zone Key Vaults, customer-managed keys, private DNS, Traffic Manager, the container registry |
+| [aks-terraform](https://github.com/onek8s/aks-terraform) | The clusters and what an environment's clusters share: the cells' networks and NSGs, the platform and zone Key Vaults, customer-managed keys, private DNS, the container registry |
 | [aks-fluxcd-platform](https://github.com/onek8s/aks-fluxcd-platform) | What Flux deploys into every cluster: the isolation zones' gateways, External Secrets Operators and Cilium policies, the cluster autoscaler's priority expander, external-dns |
 | [aks-fluxcd-example](https://github.com/onek8s/aks-fluxcd-example) | An application team's repository |
 
@@ -28,7 +28,7 @@ and where the code implements them. Four repositories share the work:
 | R20 | Stateful cluster zone-redundant + LTS | – | Later |
 | R22 | Pod subnet CNI, Cilium, TLS-only Gateway API (design 4.1) | Azure CNI Pod Subnet + Cilium, VNet encryption on every cell VNet; a Gateway per zone (App Routing's `approuting-istio`) with HTTPS only (no port 80), NSGs allow 443 only; the edge offers HTTP/2 and HTTP/1.1, TLS 1.2 and 1.3 (no listener setting refuses the older ones); `stacks/aks-policy` `h2c-upstream` holds every application Service port to `appProtocol: kubernetes.io/h2c` (**deny**), Flux's webhook receiver `flux-system/webhook-receiver` exempt by name (`exemptServices`; GitHub delivers over HTTP/1.1, D78) | Built, unverified |
 | R23 | One cluster per AZ, zone pools | `aks-dev-int-stateless-az3`, system pool in one AZ, classic zone pools on-demand and spot (amd64, arm64) with the cluster autoscaler, from zero (the zones' gateways and ESOs run on the system pool); VPA add-on with `InPlaceOrRecreate`; `stacks/aks-policy` `rollout-guardrails` (≥ 2 replicas spread over nodes, `maxUnavailable: 0`, PDBs that allow a drain; 3 over zones in the stateful cluster) and `vertical-pod-autoscalers` (in place or off, requests only, `maxAllowed`), deny | Built |
-| R24 | Health probes and `/healthz` | aks-fluxcd-example: aks-hello's readiness and liveness probes on `/healthz`; aks-terraform `global_hostnames.health_path = "/healthz"`: Traffic Manager probes it over HTTPS through each cell's gateway; `stacks/aks-policy` deployment safeguards (probes) in deny since 2026-10-19; the Isolation tests check `/healthz` per cell and on the global name | Built; synthetic monitoring: phase 2 |
+| R24 | Health probes and `/healthz` | aks-fluxcd-example: aks-hello's readiness and liveness probes on `/healthz`; `stacks/aks-policy` deployment safeguards (probes) in deny since 2026-10-19; the Isolation tests check `/healthz` per cell and on the application's own name | Built; synthetic monitoring: phase 2 |
 | R25 | dev, acc, prd in sync | Same modules with one tfvars set per environment; dev only in the build tenant | dev built |
 | R26, R27 | Automated zero-downtime upgrades, two speeds | Auto-upgrade channels `none` / `None`, every cell on 1.36 | Version pipeline: phase 2 (aks-ai-agents) |
 | R28 | Customer-managed keys | aks-terraform `customer_managed_keys`: `key-<cluster>-kms` (KMS) and `key-<cluster>-disk` (disk encryption set) per cluster in the platform vault, encryption at host on every node | Built |
@@ -56,9 +56,9 @@ reported as *audit only*.
 
 ## Changed while building, to confirm in phase 2
 
-1. **Traffic Manager instead of Front Door.** External applications are published on a public load balancer of
-   their zone's gateway in every cell, with one Azure Traffic Manager profile per external hostname
-   (design section 3.1). Traffic Manager is DNS only: no WAF and no client-IP affinity.
+1. **Neither Traffic Manager nor Front Door** (design v4.13 trial). External applications are published on a public
+   load balancer of their zone's gateway in their home cell, by public DNS, and moved by the migration workflow like
+   internal ones (design section 3.1): no WAF.
 2. **Namespace = application, and its share of a vault is `<namespace>--`.** A zone's application namespace is
    `<zone>-<app>`; its reader identity's ABAC condition is on the namespace's prefix, and the gateways'
    certificates are `<zone>-gateway--wildcard`, read under the same condition rather than a role per certificate.

@@ -3,7 +3,7 @@
 This is phase 1 (Foundation) of the [implementation project](https://github.com/onek8s/onek8s.github.io/blob/main/archive/7.1-implementation-project-and-acceptance-testing.md):
 build tenant, management and hub, `sub-aks-dev`, pipelines with OIDC, Azure Policy in audit mode and the client
 VNet. **Exit criterion: a stateless cell can be created and deleted by the pipeline** (step 8). The clusters
-themselves - the cells, their networks, Key Vaults and Traffic Manager - are
+themselves - the cells, their networks and Key Vaults - are
 [onek8s/aks-terraform](https://github.com/onek8s/aks-terraform)'s, deployed into `sub-aks-dev` with this
 repository's dev apply identity.
 
@@ -13,7 +13,7 @@ repository's dev apply identity.
                                           └► stacks/platform-extensions (management VNet + runners, client VNet,
                                              Firewall rules, AKS deployment identities)
  step 7  workflow "AKS policy"           ──► stacks/aks-policy (environments/dev/policy.tfvars, GitHub-hosted)
-         onek8s/aks-terraform "Deploy"  ──► shared/ (cells' networks, vaults, Traffic Manager), then each cell
+         onek8s/aks-terraform "Deploy"  ──► shared/ (cells' networks, vaults), then each cell
  step 8  onek8s/aks-terraform "Deploy"  ──► destroy / apply one cell
 ```
 
@@ -259,7 +259,6 @@ the design:
 | Runner ACR | Basic, public endpoint, Entra ID authentication only | Premium, private endpoint | `runner_registry_sku` |
 | Environment ACR | not part of the landing zone: created by [aks-terraform](https://github.com/onek8s/aks-terraform) (`shared/`). Basic, public endpoint, Entra ID authentication only in every non-production environment (design D62) | Premium, private endpoint, no public network access in prd | aks-terraform `shared/` `container_registry_sku` (defaults from the environment); `firewall_exposures.<exposure>.container_registry` in `stacks/platform-extensions` for the Firewall rule of a public registry (null with a private endpoint) |
 | Key Vaults | standard, software-protected cluster keys (RSA) | premium, RSA-HSM | aks-terraform `shared/` – changing it later replaces the cluster keys, so rebuild the cells |
-| Traffic Manager | one profile per external hostname | the same | aks-terraform `shared/`: `global_hostnames` |
 | AKS | Free tier, 1 system node, public API server | Standard tier, 3 system nodes, private API server | `sku_tier`, `default_node_pool.node_count`, `private_cluster_enabled` in aks-terraform's `envs/dev-ext-stateless-az*.tfvars` |
 | Monitoring | none for now - observability is set up later: no Log Analytics, no Container Insights, no VM Insights, no diagnostic settings | Log Analytics, Container Insights, control plane diagnostics (no Defender: a third-party security tool, design D81) | to be designed with the observability stack ([section 6.2](https://onek8s.github.io/design/6.2-observability-with-grafana-cloud.html)) |
 | Private link DNS zones | Key Vault and ACR only | all ~90 ALZ zones | `private_link_private_dns_zones` in the accelerator config (remove it for all zones); add a zone there and in `modules/platform-lookup` before a stack uses it |
@@ -300,8 +299,8 @@ bootstrap stay green.
 Run the **AKS policy** workflow (also on every change to `stacks/aks-policy`): it assigns the AKS policies to
 `sub-aks-dev`, where every cluster with the Azure Policy add-on reports its compliance. Then deploy the clusters
 from [onek8s/aks-terraform](https://github.com/onek8s/aks-terraform): its **Deploy** workflow applies `dev-shared`
-(the cells' networks, the platform and zone Key Vaults, the internal zones' private DNS, the container registry,
-Traffic Manager) and then the cell, `dev-int-stateless-az3`; its **Renew Certificate**
+(the cells' networks, the platform and zone Key Vaults, the internal zones' private DNS, the container registry)
+and then the cell, `dev-int-stateless-az3`; its **Renew Certificate**
 workflow issues the gateways' certificates. A cell takes roughly 15–20 minutes. Its **Cluster status** workflow
 reports what runs inside a cell.
 
@@ -343,5 +342,5 @@ Before acceptance testing every policy goes to its production effect (requiremen
 - in `stacks/aks-policy`, the definitions still at effect `Audit` move to `Deny` one by one,
 - the design SKUs (see [Lab SKUs](#lab-skus)), in particular Firewall Premium with
   `intrusion_detection.mode = "Deny"` and `threat_intelligence_mode = "Deny"` in the Firewall policy,
-- external applications are reached through Azure Traffic Manager (aks-terraform), which has no WAF; a WAF in front of the
-  external zones is an open question of the design.
+- external applications are reached at their zone's gateway in their home cell (no Traffic Manager), with no WAF; a WAF in
+  front of the external zones is an open question of the design.

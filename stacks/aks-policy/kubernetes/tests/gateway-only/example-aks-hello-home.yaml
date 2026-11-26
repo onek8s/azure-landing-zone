@@ -1,11 +1,9 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  annotations:
-    external-dns.kubernetes.io/controller: traffic-manager
   labels:
     app.kubernetes.io/name: aks-hello
-  name: aks-hello-global
+  name: aks-hello-home
   namespace: ext-fi-example
 spec:
   hostnames:

@@ -364,8 +364,8 @@ tests:
     object: gateway-only/example-aks-hello.yaml
     assertions:
     - violations: 'no'
-  - name: example-aks-hello-global
-    object: gateway-only/example-aks-hello-global.yaml
+  - name: example-aks-hello-home
+    object: gateway-only/example-aks-hello-home.yaml
     assertions:
     - violations: 'no'
 - name: placement-labels-stateful
