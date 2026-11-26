@@ -56,7 +56,7 @@ reported as *audit only*.
 
 ## Changed while building, to confirm in phase 2
 
-1. **Neither Traffic Manager nor Front Door** (design v4.13 trial). External applications are published on a public
+1. **Neither Traffic Manager nor Front Door** (design v5.0 trial). External applications are published on a public
    load balancer of their zone's gateway in their home cell, by public DNS, and moved by the migration workflow like
    internal ones (design section 3.1): no WAF.
 2. **Namespace = application, and its share of a vault is `<namespace>--`.** A zone's application namespace is
