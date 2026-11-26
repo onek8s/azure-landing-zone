@@ -250,8 +250,6 @@ variable "platform_source_fqdns" {
     # Helm repositories and their chart downloads (GitHub Pages, GitHub releases)
     "charts.external-secrets.io",
     "external-secrets.io", # the chart index's redirect target
-    "kubernetes-sigs.github.io",
-    "traefik.github.io",
     "grafana.github.io",
     "objects.githubusercontent.com",
     "release-assets.githubusercontent.com",

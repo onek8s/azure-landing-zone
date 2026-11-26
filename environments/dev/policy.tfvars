@@ -54,10 +54,8 @@ kubernetes_deny = [
   "namespace-ownership",
   # 2026-10-19 (D82): 0 non-compliant in Azure Policy's compliance of aks-dev-int-stateless-az3 (the cell
   # was stopped, so the add-on's last audit; nothing changes in a stopped cell). zone-placement: aks-hello
-  # runs on int-se's zone nodes now; gateway-tls: traefik-dynamic states h2 and TLS 1.3 in every gateway
-  # namespace.
+  # runs on int-se's zone nodes now.
   "zone-placement",
-  "gateway-tls",
   "h2c-upstream", # 2026-10-19: 0 violations with default/kubernetes exempt by name
   # Built-in Kubernetes definitions
   "k8s-no-ingress",
