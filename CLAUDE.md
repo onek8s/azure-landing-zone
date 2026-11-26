@@ -20,7 +20,7 @@ The one exception is named, not left to the namespace exclusions (2026-10-19, de
 GitHub's webhook deliveries reach over HTTP/1.1 (`<namespace>/<name>`; the definition's default is `[]`) - and since
 2026-10-19 `default/kubernetes`, the API server's own Service.
 
-**Policy `gateway-tls` removed (design v5.0, the user's trial of App Routing without Traefik):** App Routing's Istio
+**Policy `gateway-tls` removed (design v5.0, the user):** App Routing's Istio
 cannot refuse HTTP/1.1 or TLS 1.2 on a listener, so there is nothing to read back; `h2c-upstream` stays (HTTP/2 to the pod).
 
 **Deployment safeguards' mutation report (2026-10-19, #99):** the built-in initiative's one warn-only member,
