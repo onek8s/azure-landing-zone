@@ -397,8 +397,10 @@ resource "azurerm_firewall_policy_rule_collection_group" "exposure_environment" 
     # platform's side - the system pool's nodes and pods - to a zone's nodes and pods: the kubelet (the API server's
     # tunnel, metrics-server, the collectors' node and container metrics), the node exporter, Cilium's health
     # checks, and the zone's gateway to the zone's applications on whatever port each application serves, so TCP
-    # as a whole; ICMP for Cilium's health. From a zone to the system pool only cluster DNS (CoreDNS, 53) and the
-    # API server's private endpoint (443): nothing else of the platform is a zone's to reach. Nothing between two
+    # as a whole; ICMP for Cilium's health. From a zone to the system pool only cluster DNS (CoreDNS, 53), the
+    # API server's private endpoint (443) and, for a zone gateway on the zone's own nodes (the default; a
+    # non-production cell may keep it on the system pool, aks-fluxcd-platform infrastructure/zones), istiod's xDS and
+    # CA port (15012): nothing else of the platform is a zone's to reach. Nothing between two
     # zones (design R4): an application reaches another zone's application through its published name alone - an
     # application rule of its own rule file, proxied by the firewall.
     rule {
@@ -428,6 +430,13 @@ resource "azurerm_firewall_policy_rule_collection_group" "exposure_environment" 
       source_ip_groups      = [for zone in keys(each.value.zones) : azurerm_ip_group.policy_zone["${each.value.env}-${zone}"].id]
       destination_ip_groups = [azurerm_ip_group.policy_system[each.key].id]
       destination_ports     = ["443"]
+    }
+    rule {
+      name                  = "zones-to-istiod"
+      protocols             = ["TCP"]
+      source_ip_groups      = [for zone in keys(each.value.zones) : azurerm_ip_group.policy_zone["${each.value.env}-${zone}"].id]
+      destination_ip_groups = [azurerm_ip_group.policy_system[each.key].id]
+      destination_ports     = ["15012"]
     }
     rule {
       name                  = "zones-to-cilium-health"
@@ -462,6 +471,22 @@ resource "azurerm_firewall_policy_rule_collection_group" "exposure_environment" 
       protocols {
         type = "Https"
         port = 443
+      }
+    }
+
+    # A zone's External Secrets Operator on the zone's own nodes (the default; a non-production cell may keep it on
+    # the system pool): the platform vault, for the zone gateway's certificate, and the zone's own vault - no other
+    # zone's. The vaults' roles and ABAC conditions still decide what each identity reads.
+    dynamic "rule" {
+      for_each = each.value.zones
+      content {
+        name              = "${rule.key}-key-vaults"
+        source_ip_groups  = [azurerm_ip_group.policy_zone["${each.value.env}-${rule.key}"].id]
+        destination_fqdns = ["${each.value.platform_key_vault}.vault.azure.net", "${rule.value.key_vault}.vault.azure.net"]
+        protocols {
+          type = "Https"
+          port = 443
+        }
       }
     }
 
